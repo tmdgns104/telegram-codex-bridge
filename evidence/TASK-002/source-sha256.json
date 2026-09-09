@@ -1,0 +1,97 @@
+{
+  "basis": "Git index blob bytes (Git-normalized line endings)",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "4038286a1ed13a5d88e938128c401cf5b336985b583c3a6efdb2e6c7e683e8e5"
+    },
+    {
+      "path": "package.json",
+      "sha256": "c1e3239304b028505114ee9313732c87e34fb4a121455dc95df252951461f742"
+    },
+    {
+      "path": "scripts/codex-notify-router.py",
+      "sha256": "d3ac45472707dd659782437913bb458d514e7cfc58ffaf3d832aab3a743c7d96"
+    },
+    {
+      "path": "scripts/codex-telegram-notify.py",
+      "sha256": "0d3c45fa47b26577143106cd3a86e1f0be3a2936eb982b099a033426cb5089ba"
+    },
+    {
+      "path": "scripts/codex-tg.mjs",
+      "sha256": "ae75244da8c1310f149f2d40c6502e6a3a2803f8e55f92461c91be56a57026a2"
+    },
+    {
+      "path": "scripts/discover-chat-id.mjs",
+      "sha256": "e28769410eb6d038bee5605590ece1264bdef0ee89bd87dd693e9f57fdac9174"
+    },
+    {
+      "path": "scripts/smoke-app-server.mjs",
+      "sha256": "1405ad6025dc36b1f39ec4d94f3fdc4fac582e6d84df1346b073df9dfb390ad8"
+    },
+    {
+      "path": "src/app-server-client.mjs",
+      "sha256": "3b4154763d48fd2363261f0e783fe9a131cf514544c4cfe3ee6027d61fb64b4d"
+    },
+    {
+      "path": "src/bridge.mjs",
+      "sha256": "6ba822a04bc6fe2decf7f20015faca5f426fd6554bb15f68a8c0dce56c809c0c"
+    },
+    {
+      "path": "src/config.mjs",
+      "sha256": "c2d5475c50432739baf033c1de44b13d9ed2af35561100dc3550c6a70f3a4283"
+    },
+    {
+      "path": "src/format.mjs",
+      "sha256": "7852ba47f41fd9d741dd7f6c34b6f53e28c62c703498431df5fda98e848c88fc"
+    },
+    {
+      "path": "src/index.mjs",
+      "sha256": "84648b05be7d86037039fb48acc908091fbd107e9e890e2178c04a5ed759bbf7"
+    },
+    {
+      "path": "src/local-control.mjs",
+      "sha256": "f9447e456b52ff7f5a0c48703d552b8e27567a5ecd2ebc88c68bea8d7c390f43"
+    },
+    {
+      "path": "src/singleton.mjs",
+      "sha256": "7adfddb806d25d24434c1b5c0c38d2f3920a2ed574dac896cb3a0dd042577e31"
+    },
+    {
+      "path": "src/telegram-client.mjs",
+      "sha256": "b32c5d41895d0b4a82c4b2a5280a876597dcc74fe8e6c18d1c346f6c48e61368"
+    },
+    {
+      "path": "test/app-server-client.test.mjs",
+      "sha256": "062e22696e8d34ba597be11d28e4125dcc5ebc4401967c40cd66ba05593ceba6"
+    },
+    {
+      "path": "test/bridge.test.mjs",
+      "sha256": "f99c6ae64c14f30a63a61d994d7dd80be312b2c57f41b0a3a0b0774f7d1c3542"
+    },
+    {
+      "path": "test/cli.test.mjs",
+      "sha256": "cb89c28521c2fb6eef6e4d5483af2bdce498c81c948be3efd8f64f6a84570d1a"
+    },
+    {
+      "path": "test/config.test.mjs",
+      "sha256": "69920685d7a8d0d281af990d308810e7e229cded0650397115d3166a4e176106"
+    },
+    {
+      "path": "test/format.test.mjs",
+      "sha256": "59838d400e2a724d5ad23b2145d32f472e2bffaa1b2281e8051fe13645ad5753"
+    },
+    {
+      "path": "test/local-control.test.mjs",
+      "sha256": "5a3d60a2db8c12f210306a19ef2e021a2c9e53972eb23df1644f9f08af0c67e9"
+    },
+    {
+      "path": "test/singleton.test.mjs",
+      "sha256": "d06db7543a071ac9160d35f2e6eb006d930edfb2fc36811c2cae46aa7b5f5056"
+    },
+    {
+      "path": "test/telegram-client.test.mjs",
+      "sha256": "6e2a18d89c96f068f307e77efad6da7a6d97a92a30fd579a60b71f88d11d950c"
+    }
+  ]
+}

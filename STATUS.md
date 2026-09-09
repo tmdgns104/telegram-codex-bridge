@@ -1,9 +1,19 @@
 # Telegram Codex Bridge — Current Status
 
 Updated: 2026-09-09
-Current Task: [TASK-001](tasks/TASK-001-practical-task-tracking.md)
-Status: COMPLETE — local acceptance PASS; GitHub published
+Current Task: [TASK-002](tasks/TASK-002-reliable-user-flow.md)
+Status: COMPLETE — local acceptance PASS; GitHub publication pending
 Repository: https://github.com/tmdgns104/telegram-codex-bridge (public, main)
+
+TASK-002: 연결 종료/미확인 상태, `/pending`, `/reconnect`, PC 접수 번호/조회,
+비밀 질문 차단을 구현했다. check 및 테스트 61/61 PASS, 실제 Codex handshake와
+합성 대화의 조회/종료/재시작/재개/보관 검사 PASS. 스킬 설치본도 61/61 PASS.
+
+- Evidence: [TASK-002 verification](evidence/TASK-002/verification.md)
+- UNVERIFIED: 실제 Telegram 왕복과 운영 브리지 재시작. 실제 모델 작업은 실행하지 않음.
+- Next: GitHub 게시 확인 후, 운영 작업 종료 시 브리지 재시작 및 `/status`, `/pending`, PC `--status` 확인.
+
+아래는 완료된 TASK-001의 기준 상태다.
 
 `/status`에서 활동·시간·승인·질문 대기를 확인하고 `/last`로 최근 결과를 다시 본다.
 PC/Telegram 입력을 순서대로 처리하며, 빠른 완료·알림 실패·오래된 질문 버튼에 대한

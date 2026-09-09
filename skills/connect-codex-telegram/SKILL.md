@@ -67,7 +67,7 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
 - `scripts/configure_codex_notify.py`: preserve the existing global notifier and add Telegram turn-complete delivery.
 - `references/architecture.md`: event flow and app-server request mapping. Read when modifying bridge behavior.
 - `references/troubleshooting.md`: known Windows, Telegram, and Codex failure modes. Read when setup or startup fails.
-- When changing task tracking or input handling, use the concurrency and delivery regression cases in `references/troubleshooting.md`; the bundled bridge includes in-memory `/status` and `/last` support.
+- When changing task tracking or input handling, use the recovery and delivery regression cases in `references/troubleshooting.md`. The template includes `/pending`, explicit `/reconnect`, and PC receipts with `codex-tg.cmd --status`.
 - `references/stot-template.md`: durable project-history template. Read when asked to remember or hand off work.
 
 ## Completion report

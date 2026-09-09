@@ -13,11 +13,13 @@ class FakeAppServer extends EventEmitter {
     this.responses = [];
   }
   async start() {}
+  async close() {}
   async request(method, params) {
     this.requests.push({ method, params });
     if (method === "thread/start") return { thread: { id: "thread-1" } };
     if (method === "thread/resume") return { thread: { id: params.threadId } };
     if (method === "turn/start") return { turn: { id: "turn-1" } };
+    if (method === "thread/turns/list") return { data: [] };
     return {};
   }
   respond(id, result) { this.responses.push({ id, result }); }
@@ -353,6 +355,197 @@ test("승인 메시지가 전송되는 동안 작업이 끝나도 늦게 나타�
   await tick();
   assert.equal(bridge.pendingCallbacks.size, 0);
   assert.ok(telegram.removedKeyboards.includes(telegram.messages.at(-1).message_id));
+});
+
+test("disconnect reports unknown state and reconnect reads history without replay", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  appServer.emit("fatal", new Error("synthetic disconnect"));
+  await bridge.handleUpdate(message("/status"));
+  assert.match(telegram.messages.at(-1).text, /연결 끊김/);
+  assert.doesNotMatch(telegram.messages.at(-1).text, /작업 진행 중/);
+  await assert.rejects(bridge.submitLocalPrompt("duplicate"), /reconnect/);
+  await bridge.handleUpdate(message("/reconnect"));
+  assert.equal(bridge.connectionState, "connected");
+  assert.equal(appServer.requests.filter(({ method }) => method === "turn/start").length, 1);
+  assert.ok(appServer.requests.some(({ method }) => method === "thread/resume"));
+  assert.ok(appServer.requests.some(({ method }) => method === "thread/turns/list"));
+  assert.equal(bridge.activeTurnId, null);
+});
+
+test("unknown acceptance blocks queued prompts until explicit recovery", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  const request = appServer.request.bind(appServer);
+  let starts = 0;
+  appServer.request = async (method, params) => {
+    if (method === "turn/start") {
+      starts += 1;
+      throw Object.assign(new Error("timeout"), { outcome: "unknown" });
+    }
+    return request(method, params);
+  };
+  const first = assert.rejects(bridge.submitLocalPrompt("test"), (error) => error.outcome === "unknown");
+  const second = assert.rejects(bridge.submitLocalPrompt("test again"), /reconnect/);
+  await Promise.all([first, second]);
+  assert.equal(starts, 1);
+  await bridge.handleUpdate(message("/status"));
+  assert.match(telegram.messages.at(-1).text, /접수 여부/);
+  await bridge.handleUpdate(message("/new"));
+  assert.match(telegram.messages.at(-1).text, /reconnect/);
+});
+
+test("failed history read stays disconnected instead of creating a new conversation", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => {
+    if (method === "thread/resume") throw new Error("unavailable");
+    return request(method, params);
+  };
+  await bridge.handleUpdate(message("/reconnect"));
+  assert.equal(bridge.connectionState, "disconnected");
+  assert.equal(appServer.requests.filter(({ method }) => method === "thread/start").length, 1);
+  assert.match(telegram.messages.at(-1).text, /복구에 실패/);
+});
+
+test("pending recovers failed approval delivery and all copies decide once", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  const send = telegram.sendMessage.bind(telegram);
+  telegram.sendMessage = async () => { throw new Error("offline"); };
+  appServer.emit("request", { id: 401, method: "item/commandExecution/requestApproval", params: {
+    threadId: "thread-1", turnId: "turn-1", command: "npm test",
+  } });
+  await tick();
+  assert.equal(bridge.pendingCallbacks.size, 1);
+  telegram.sendMessage = send;
+  await bridge.handleUpdate(message("/pending"));
+  const first = telegram.messages.at(-1);
+  await bridge.handleUpdate(message("/pending"));
+  const second = telegram.messages.at(-1);
+  assert.equal(first.options.reply_markup.inline_keyboard[0][0].callback_data, second.options.reply_markup.inline_keyboard[0][0].callback_data);
+  const query = (msg) => ({ callback_query: { id: `tap-${msg.message_id}`,
+    data: msg.options.reply_markup.inline_keyboard[0][0].callback_data,
+    message: { chat: { id: 123 }, message_id: msg.message_id } } });
+  await Promise.all([bridge.handleUpdate(query(first)), bridge.handleUpdate(query(second))]);
+  assert.equal(appServer.responses.length, 1);
+  assert.ok(telegram.removedKeyboards.includes(first.message_id));
+  assert.ok(telegram.removedKeyboards.includes(second.message_id));
+});
+
+test("pending recovers question delivery and older copies cannot answer twice", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  const send = telegram.sendMessage.bind(telegram);
+  telegram.sendMessage = async () => { throw new Error("offline"); };
+  ask(appServer, [{ id: "choice", question: "Choose", options: [{ label: "A" }] }]);
+  await tick();
+  telegram.sendMessage = send;
+  await bridge.handleUpdate(message("/pending"));
+  const first = telegram.messages.at(-1);
+  await bridge.handleUpdate(message("/pending"));
+  const second = telegram.messages.at(-1);
+  await bridge.handleUpdate(message("custom answer"));
+  assert.equal(appServer.responses.length, 1);
+  assert.ok(telegram.removedKeyboards.includes(first.message_id));
+  assert.ok(telegram.removedKeyboards.includes(second.message_id));
+});
+
+test("secret questions are rejected before display and subsequent text is blocked", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  ask(appServer, [
+    { id: "plain", question: "normal question" },
+    { id: "secret", question: "SYNTHETIC_SECRET_QUESTION", isSecret: true },
+  ]);
+  await tick();
+  await bridge.handleUpdate(message("SYNTHETIC_SECRET_ANSWER"));
+  await assert.rejects(bridge.submitLocalPrompt("SYNTHETIC_SECRET_ANSWER"), /민감한 입력/);
+  assert.equal(bridge.pendingUserInput, null);
+  assert.ok(appServer.responses[0].error);
+  assert.ok(!JSON.stringify(appServer.requests).includes("SYNTHETIC_SECRET_ANSWER"));
+  assert.ok(!JSON.stringify(appServer.responses).includes("SYNTHETIC_SECRET_ANSWER"));
+  assert.ok(!JSON.stringify(telegram.messages).includes("SYNTHETIC_SECRET_QUESTION"));
+  complete(appServer);
+  await tick();
+  await bridge.handleUpdate(message("/new"));
+  assert.equal(bridge.secretInputBlocked, false);
+});
+
+test("forged approval action is rejected without consuming the legitimate button", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  appServer.emit("request", { id: 88, method: "item/commandExecution/requestApproval", params: {
+    threadId: "thread-1", turnId: "turn-1", command: "npm test",
+  } });
+  await tick();
+  const data = telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
+  await bridge.handleUpdate({ callback_query: { id: "forged", data: data.replace(":accept", ":grant"), message: { chat: { id: 123 } } } });
+  assert.equal(appServer.responses.length, 0);
+  assert.equal(bridge.pendingCallbacks.size, 1);
+});
+
+test("Telegram status remains responsive while its previous prompt is awaiting Codex", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  const request = appServer.request.bind(appServer);
+  let finish;
+  appServer.request = async (method, params) => {
+    if (method === "turn/start") await new Promise((resolve) => { finish = resolve; });
+    return request(method, params);
+  };
+  bridge.dispatchUpdate(message("test"));
+  await tick();
+  bridge.dispatchUpdate(message("/status"));
+  await tick();
+  assert.match(telegram.messages.at(-1).text, /작업 시작을 요청하는 중/);
+  finish();
+  await tick();
+  assert.equal(bridge.activeTurnId, "turn-1");
+});
+
+test("text sent before a question is delivered is not consumed as its answer", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  const send = telegram.sendMessage.bind(telegram);
+  let finish;
+  telegram.sendMessage = async (chatId, text, options) => {
+    if (text.includes("Choose")) await new Promise((resolve) => { finish = resolve; });
+    return send(chatId, text, options);
+  };
+  ask(appServer, [{ id: "one", question: "Choose", options: [{ label: "A" }] }]);
+  await bridge.handleUpdate(message("premature answer"));
+  assert.equal(appServer.responses.length, 0);
+  assert.match(telegram.messages.at(-1).text, /질문을 확인한 뒤/);
+  finish();
+  await tick();
+  await bridge.handleUpdate(message("intended answer"));
+  assert.deepEqual(appServer.responses.at(-1).result.answers.one, { answers: ["intended answer"] });
+});
+
+test("unused conversation can reconnect without querying unmaterialized history", async (t) => {
+  const { appServer, bridge } = await startFixture(t);
+  await bridge.handleUpdate(message("/reconnect"));
+  assert.equal(bridge.connectionState, "connected");
+  assert.equal(appServer.requests.filter(({ method }) => method === "thread/start").length, 2);
+  assert.equal(appServer.requests.filter(({ method }) => method === "turn/start").length, 0);
+  assert.equal(appServer.requests.filter(({ method }) => method === "thread/turns/list").length, 0);
+});
+
+test("recovery delivery failure preserves connected state and recovered result", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("test");
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => method === "thread/turns/list"
+    ? { data: [{ id: "turn-1", status: "completed", items: [{ type: "agentMessage", text: "recovered result" }] }] }
+    : request(method, params);
+  const send = telegram.sendMessage.bind(telegram);
+  telegram.sendMessage = async () => { throw new Error("offline"); };
+  await bridge.handleUpdate(message("/reconnect"));
+  assert.equal(bridge.connectionState, "connected");
+  telegram.sendMessage = send;
+  await bridge.handleUpdate(message("/last"));
+  assert.match(telegram.messages.at(-1).text, /recovered result/);
+  assert.match(telegram.messages.at(-1).text, /소요 시간: 확인 불가/);
+  assert.equal(appServer.requests.filter(({ method }) => method === "turn/start").length, 1);
 });
 
 test("스레드에 불필요한 샌드박스 외부 재시도를 막는 지침을 전달한다", async (t) => {

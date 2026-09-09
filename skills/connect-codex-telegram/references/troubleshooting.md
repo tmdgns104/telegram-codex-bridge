@@ -2,12 +2,19 @@
 
 ## Task tracking and concurrent input
 
+- Separate bridge receipt, Codex acceptance, and task completion. A response timeout after submission is an unknown outcome. Block new mutations until explicit recovery; never retry a Codex turn implicitly.
+- Namespace receipt deduplication by bridge instance and request ID. An automatic transport retry must keep both IDs; reject stale instances. Bound in-memory records without evicting IDs that could then execute again. Do not claim deduplication across process restarts or new user submissions.
+- Reject secret-marked question batches before displaying any question. Do not echo the question body in the rejection. Block subsequent text until the user deliberately starts a new conversation; arbitrary secret detection is not guaranteed.
+- Keep status queries responsive while RPCs await replies. Consume answers only after the current question was delivered, so fast follow-up text cannot answer an unseen next question.
+- Reconnect is a deliberate operation that may interrupt work: confirm termination of the owned app-server process before starting its replacement. Preserve unknown acceptance and expire callbacks from the old connection. On Windows a .cmd wrapper can own a descendant process; terminate only that owned tree.
+- Codex ephemeral threads do not support paginated turn history, and a newly created persistent thread may not have stored history before its first message. Do not infer a usable recovery fixture from thread/start alone. On a verified compatible CLI, the bundled `smoke:app-server -- --recovery` materializes synthetic history via `thread/inject_items`, checks close/start/resume, and archives the fixture without a model turn. Never inject test items into a user thread. Confirm method strings from the generated ClientRequest mapping, not schema type filenames.
 - Treat Codex request acceptance and Telegram notification delivery as separate outcomes. A failed or delayed receipt must not make an accepted prompt look rejected and invite duplicate submission.
 - Serialize prompt and thread-changing commands across input channels. Keep status queries responsive while a start request is pending, and let a failed queue entry release the next entry. Do not replay ambiguous requests automatically.
 - Apply item events only to the current thread and turn. Test completion before the start response, duplicate completion, and delayed events; a completed turn must not become active again.
 - Keep the latest completion result in memory before sending it so `/last` can recover a missed delivery. Document that restart clears it; do not add prompt/result persistence to the thread-ID state file implicitly.
 - Consume a question option before awaiting Telegram I/O. Remove old buttons after text answers, resolution, and completion, including when resolution overtakes message delivery.
 - Verify with a fake app-server that holds/releases responses and a fake Telegram client that delays/rejects sends. Assert RPC counts and state transitions, then run focused tests against the pre-fix source when available. Real Telegram delivery requires its own authorized end-to-end check.
+- Bound retries for transient delivery errors, and respect Telegram's [`retry_after`](https://core.telegram.org/bots/api#responseparameters). Do not repeatedly retry permanent errors or hold the user interface for a long server-requested delay; keep `/pending` available for later recovery.
 
 ## Telegram
 

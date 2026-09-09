@@ -13,4 +13,4 @@ __pycache__/
 *.bak
 *.bak-*
 /STOT.md
-/evidence/**/smoke.txt
+/evidence/**/smoke*.txt

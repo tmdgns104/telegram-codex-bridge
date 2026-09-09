@@ -30,7 +30,7 @@ try {
   const shutdown = () => {
     telegram.stop();
     void localControl.close();
-    appServer.close();
+    void appServer.close().catch((error) => console.error(error.message));
   };
   process.once("SIGINT", shutdown);
   process.once("SIGTERM", shutdown);
@@ -42,13 +42,13 @@ try {
     config.allowedChatId,
     `📂 Codex 작업 경로: ${config.workdir}\n\n🟢 Telegram Codex Bridge가 시작되었습니다. /help를 입력하세요.`,
   );
-  await telegram.poll((update) => bridge.handleUpdate(update), config.pollTimeout);
+  await telegram.poll((update) => bridge.dispatchUpdate(update), config.pollTimeout);
 } catch (error) {
   console.error(`시작 실패: ${error.message}`);
   process.exitCode = 1;
 } finally {
   telegram?.stop();
   await localControl?.close();
-  appServer?.close();
+  await appServer?.close();
   await singletonLock?.close();
 }

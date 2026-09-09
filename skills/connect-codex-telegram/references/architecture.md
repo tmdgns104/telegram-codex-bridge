@@ -39,6 +39,23 @@ Use short random callback tokens instead of embedding commands or paths in Teleg
 
 Use `workspace-write` plus `on-request` for a coding bridge, or `read-only` for initial verification. Do not accept `danger-full-access` or `never` in configuration validation. Do not expose `acceptForSession` in the personal Telegram UI.
 
+## Recovery and PC receipts
+
+The loopback interface keeps the legacy `prompt` action and adds authenticated `hello`,
+`submit`, and `status`. A submit carries a bridge instance ID and request ID. The receipt
+is returned before Codex replies; it then becomes accepted, rejected, or unknown. Records
+are memory-only and bounded. They describe acceptance, not final task completion.
+
+Telegram `/pending` sends pending approvals/questions again using the same request identity.
+Every known keyboard copy expires when the request resolves. Secret question batches are
+rejected before display; subsequent text is blocked until a fresh conversation.
+
+Transport deadlines do not impose a turn execution limit. `/reconnect` explicitly closes
+the owned app-server, resumes the thread, and reads the latest turn. It never starts a
+previous prompt again. A known unused in-memory thread may be replaced with a fresh empty
+thread because no user work was submitted. Receipt/result bodies are not added to the
+thread-ID state file.
+
 ## Global completion notifications
 
 Codex's global `notify` command receives one JSON argument for supported events, currently `agent-turn-complete`. The bundled router calls any previously configured notifier first, then calls the bridge Telegram notifier. The bridge marks its app-server child environment with `TELEGRAM_CODEX_BRIDGE_CHILD=1` so Telegram-originated work is not reported twice.

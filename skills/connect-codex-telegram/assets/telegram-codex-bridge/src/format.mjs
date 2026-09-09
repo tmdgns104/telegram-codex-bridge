@@ -4,6 +4,7 @@ export function clip(value, max = 1200) {
 }
 
 export function formatDuration(milliseconds) {
+  if (typeof milliseconds !== "number" || !Number.isFinite(milliseconds)) return "확인 불가";
   const seconds = Math.max(0, Math.floor(milliseconds / 1000));
   if (seconds < 60) return `${seconds}초`;
   const minutes = Math.floor(seconds / 60);
