@@ -1,4 +1,3 @@
 
 > telegram-codex-bridge@0.1.0 check
 > node --check src/index.mjs && node --check src/bridge.mjs && node --check src/format.mjs && node --check src/telegram-client.mjs && node --check src/app-server-client.mjs && node --check src/singleton.mjs && node --check src/local-control.mjs && node --check scripts/codex-tg.mjs
-

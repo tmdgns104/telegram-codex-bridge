@@ -2,7 +2,7 @@
 
 Updated: 2026-09-09
 Current Task: [TASK-002](tasks/TASK-002-reliable-user-flow.md)
-Status: COMPLETE — local acceptance PASS; GitHub publication pending
+Status: COMPLETE — acceptance PASS; GitHub publication verified
 Repository: https://github.com/tmdgns104/telegram-codex-bridge (public, main)
 
 TASK-002: 연결 종료/미확인 상태, `/pending`, `/reconnect`, PC 접수 번호/조회,
@@ -10,8 +10,9 @@ TASK-002: 연결 종료/미확인 상태, `/pending`, `/reconnect`, PC 접수 �
 합성 대화의 조회/종료/재시작/재개/보관 검사 PASS. 스킬 설치본도 61/61 PASS.
 
 - Evidence: [TASK-002 verification](evidence/TASK-002/verification.md)
+- Published: 구현 커밋 `a29bb8f`; GitHub main과 로컬 HEAD 일치 확인.
 - UNVERIFIED: 실제 Telegram 왕복과 운영 브리지 재시작. 실제 모델 작업은 실행하지 않음.
-- Next: GitHub 게시 확인 후, 운영 작업 종료 시 브리지 재시작 및 `/status`, `/pending`, PC `--status` 확인.
+- Next: 운영 작업 종료 시 브리지 재시작 및 `/status`, `/pending`, PC `--status` 사용자 확인.
 
 아래는 완료된 TASK-001의 기준 상태다.
 

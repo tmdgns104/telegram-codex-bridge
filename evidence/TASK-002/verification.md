@@ -13,7 +13,7 @@ Environment: Windows, Node v24.15.0, codex-cli 0.153.4.
 | `npm.cmd run smoke:app-server -- --recovery` | synthetic history → list → close/start → resume → archive PASS | smoke-recovery-local.txt (local only) |
 | Local and global skill validator | valid | actual tool result |
 | Skill installation in temporary directory | check exit 0; tests 61/61 PASS | actual tool result; template matches installation |
-| Working diff whitespace check | exit 0 | actual tool result |
+| Source diff whitespace check | exit 0 | actual tool result; trailing blank line in captured check output subsequently removed |
 
 ## User-facing acceptance
 
@@ -57,3 +57,12 @@ UNVERIFIED. Model turn execution was not part of this verification.
 The updated global skill contains the secret-free source/test/CLI template and the verified recovery
 procedure. Local operational history and smoke logs are not published. Source identity is recorded
 in source-sha256.json using Git-normalized blob bytes.
+
+## Publication
+
+Implementation commit `a29bb8fd7d364847d673ddfc14bf8217eda26b8f` was pushed to
+`tmdgns104/telegram-codex-bridge` main. `git ls-remote origin refs/heads/main` matched local
+HEAD after the push; GitHub reported a public repository with default branch main.
+The staged tree and 45 existing historical blobs were audited before publication with no
+credential/private-path findings. Environment/state files, operational logs, local-only smoke
+outputs, and STOT.md are excluded. A following documentation commit records these observed results.

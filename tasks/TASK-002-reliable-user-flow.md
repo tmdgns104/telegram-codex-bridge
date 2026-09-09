@@ -1,6 +1,6 @@
 # TASK-002 — 사용자가 복구할 수 있는 작업 접수와 대기 요청
 
-Status: COMPLETE — implementation and local acceptance PASS; publication pending
+Status: COMPLETE — implementation, acceptance, and publication verified
 Baseline: 0e18843715996005ea9c35b54893714ffdc2ef31
 Date: 2026-09-09
 
@@ -51,7 +51,7 @@ Date: 2026-09-09
 - 문제와 기존 코드 확인, 구현 범위 확정. 변경 전 작업 트리 clean.
 - 과거 노트의 입력 직렬화 및 전달 실패 분리는 REUSE, 일반 모델 Timeout 원인 분석은
   이번 통신 접수 문제에 직접 적용되지 않아 REJECT. 이전 검증을 이번 PASS로 사용하지 않는다.
-- Next: 통신 클라이언트 lifecycle → bridge 복구/대기 요청 → PC 접수 → 검증/문서/게시.
+- 당시 계획: 통신 클라이언트 lifecycle → bridge 복구/대기 요청 → PC 접수 → 검증/문서/게시.
 
 ## 구현 체크포인트
 
@@ -65,7 +65,7 @@ Date: 2026-09-09
   실패를 새 대화 생성으로 우회하지 않는다.
 - 실제 복구 검사: 검증용 별도 대화에 합성 이력만 주입한 뒤 조회·종료·재시작·재개·보관
   처리 PASS. 모델 turn/start와 실제 Telegram 전송은 실행하지 않았다.
-- 최종 검사, 스킬 임시 설치 검증, 문서/Evidence, commit/push/원격 확인을 남겨 둠.
+- 최종 검사와 스킬 임시 설치 검증, 문서/Evidence, commit/push/원격 확인 완료.
 
 ## Result / Evidence
 
@@ -80,12 +80,13 @@ Date: 2026-09-09
 - AC 5 PASS: HTTP timeout, poll abort, 제한된 재시도, 429 대기 시간, 영구 오류를 검증했다.
 - AC 6 PASS: 실제 CLI help/접수/조회 출력과 Telegram 응답성을 검증했다.
   최종 전체 테스트 61/61 PASS, 구문 검사 PASS. 기존 테스트 유지.
-- AC 7 PASS (local): 기본 smoke와 실제 별도 합성 대화 조회/종료/재시작/재개/보관 smoke PASS.
-  두 스킬 validator PASS, 설치본 check 및 테스트 61/61 PASS.
+- AC 7 PASS: 기본 smoke와 실제 별도 합성 대화 조회/종료/재시작/재개/보관 smoke PASS.
+  두 스킬 validator PASS, 설치본 check 및 테스트 61/61 PASS. 비밀 파일 제외 감사 후
+  구현 커밋 `a29bb8f` 게시, GitHub main과 로컬 HEAD 일치 확인.
 - Evidence: `evidence/TASK-002/verification.md`, `tests.txt`, `check.txt`, `source-sha256.json`.
 - UNVERIFIED: 실제 Telegram 왕복, 운영 브리지 재시작, 실제 모델 작업 실행. 이번 검증은
   모델 turn을 생성하지 않았다. 상태 복구 시 알 수 없는 과거 소요 시간은 확인 불가로 표시한다.
 - 원문/접수 메타데이터를 영구 저장하지 않는다. 인스턴스가 바뀌거나 새 요청 번호를 만든
   별도 사용자 명령까지 중복을 방지한다고 주장하지 않는다.
-- Next: 안전한 게시 및 원격 SHA 확인. 이후 기존 운영 작업 완료 → 브리지 재시작 →
+- Next: 기존 운영 작업 완료 → 브리지 재시작 →
   `/status`, `/pending`, PC `--status` 사용자 확인. 다음 독립 Task를 자동 시작하지 않는다.
