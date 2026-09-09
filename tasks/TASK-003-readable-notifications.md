@@ -1,6 +1,6 @@
 # TASK-003 — 구분 가능한 알림과 읽기 쉬운 결과
 
-Status: VERIFIED — implementation acceptance PASS; publication pending
+Status: COMPLETE — acceptance PASS; published
 Baseline: 9ca42a60c816c61faa72bdfde5cb1bdc8f039b59
 Date: 2026-09-09
 
@@ -54,12 +54,13 @@ PC notify와 Telegram 제어 경로의 상태 표시, 불필요한 알림, 작�
 기존 승인 지연 시험은 새 상세 버튼과 승인 버튼을 구분하도록 조정했고 승인 만료 검증은 유지했다.
 프로젝트와 스킬 임시 설치본 모두 check 및 테스트 85/85 PASS. 실제 app-server smoke PASS.
 스킬 2곳 validator PASS. Evidence: `evidence/TASK-003/verification.md`.
-남음: 게시 감사/commit/push/원격 SHA 확인 및 허용된 Knowledge Capture.
+게시 감사 완료. 구현 커밋 `552c396bb3e326424680436579c93c749e8eab76`을 push하고
+원격 main SHA 일치, origin/main 추적, 깨끗한 작업 트리를 확인했다.
 
 ## Result / acceptance
 
 AC 1–7 PASS: 중립 표시, JSON 원문 보존, Unicode/전체 원문, 동시 알림 중복 억제,
 잘못된 답장 대상 차단, native Python/Node 통합, 전체 회귀 및 스킬 설치 검증 완료.
-AC 8: 문서/STATUS/Evidence 갱신 완료, 게시 확인 대기.
+AC 8 PASS: 문서/STATUS/Evidence 갱신, 게시 감사, commit/push 및 원격 SHA 검증 완료.
 UNVERIFIED: 실제 Telegram 휴대폰 표시, 운영 브리지 재시작. 전체 원문은 결과 텍스트만 제공한다.
 다음 독립 범위: 승인 정보 보강·설치 진단·실제 산출물/첨부·프로젝트/작업 관리. 자동 시작하지 않는다.

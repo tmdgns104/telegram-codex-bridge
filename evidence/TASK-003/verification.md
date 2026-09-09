@@ -59,8 +59,11 @@ tests, public evidence, or reusable skills. All new fixtures use synthetic text 
 
 ## Publication
 
-Pending commit/push and remote SHA verification. Source identity is recorded in source-sha256.json
-using staged Git-normalized blob bytes.
+Implementation commit: `552c396bb3e326424680436579c93c749e8eab76`, pushed to public
+`tmdgns104/telegram-codex-bridge` main. `git ls-remote origin refs/heads/main` matched local HEAD;
+upstream was origin/main and `git status --porcelain` was empty. Source identity is recorded in
+source-sha256.json using staged Git-normalized blob bytes. This follow-up document commit records
+the observed publication; implementation files are unchanged.
 
 Pre-publication audit: 89 indexed paths and 116 reachable history objects contained no forbidden
 export/config/state/log paths. Indexed content had no credential-pattern matches. The source manifest
