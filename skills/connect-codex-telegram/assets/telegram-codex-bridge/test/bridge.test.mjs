@@ -31,6 +31,7 @@ class FakeTelegram {
     this.messages = [];
     this.callbacks = [];
     this.removedKeyboards = [];
+    this.documents = [];
   }
   async sendMessage(chatId, text, options = {}) {
     const message = { chatId: String(chatId), text, options, message_id: this.messages.length + 1 };
@@ -39,6 +40,10 @@ class FakeTelegram {
   }
   async answerCallbackQuery(id, text) { this.callbacks.push({ id, text }); }
   async removeKeyboard(chatId, messageId) { this.removedKeyboards.push(messageId); }
+  async sendTextDocument(chatId, text, filename, options) {
+    this.documents.push({ chatId, text, filename, options });
+    return { message_id: 10_000 + this.documents.length };
+  }
 }
 
 function makeBridge(options = {}) {
@@ -67,7 +72,7 @@ test("허용된 Telegram 메시지로 turn을 시작하고 완료 결과를 보�
   await bridge.start();
   await bridge.handleUpdate({ message: { chat: { id: 123 }, text: "테스트를 고쳐줘" } });
   assert.equal(appServer.requests.at(-1).method, "turn/start");
-  assert.match(telegram.messages.at(-1).text, /Codex 작업 경로:/);
+  assert.match(telegram.messages.at(-1).text, /원격 제어 · 현재 프로젝트에 전달/);
 
   appServer.emit("notification", {
     method: "turn/completed",
@@ -267,7 +272,7 @@ test("완료 알림 전송 실패 후 last로 복구한다", async (t) => {
   await tick();
   telegram.sendMessage = sendMessage;
   await bridge.handleUpdate(message("/last"));
-  assert.match(telegram.messages.at(-1).text, /작업 완료[\s\S]*수정 완료/);
+  assert.match(telegram.messages.at(-1).text, /응답 완료[\s\S]*수정 완료/);
 });
 
 function ask(appServer, questions, id = 90) {
@@ -343,7 +348,9 @@ test("승인 메시지가 전송되는 동안 작업이 끝나도 늦게 나타�
   const sendMessage = telegram.sendMessage.bind(telegram);
   let releaseApproval;
   telegram.sendMessage = async (chatId, text, options) => {
-    if (options?.reply_markup) await new Promise((resolve) => { releaseApproval = resolve; });
+    if (options?.reply_markup?.inline_keyboard[0][0].callback_data.startsWith("a:")) {
+      await new Promise((resolve) => { releaseApproval = resolve; });
+    }
     return sendMessage(chatId, text, options);
   };
   appServer.emit("request", { id: 77, method: "item/commandExecution/requestApproval", params: {
@@ -567,7 +574,7 @@ test("명령 승인 버튼을 app-server 응답으로 한 번만 전달한다", 
     params: { threadId: "thread-1", turnId: "turn-1", itemId: "item-1", command: "npm test", cwd: process.cwd() },
   });
   await new Promise((resolve) => setImmediate(resolve));
-  assert.match(telegram.messages.at(-1).text, /Codex 작업 경로:/);
+  assert.match(telegram.messages.at(-1).text, /원격 제어 · 현재 프로젝트에 전달/);
   const callbackData = telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
   const query = { id: "callback-1", data: callbackData, message: { chat: { id: 123 }, message_id: 1 } };
   await bridge.handleUpdate({ callback_query: query });
@@ -583,4 +590,159 @@ test("허용되지 않은 chat_id의 명령을 무시한다", async (t) => {
   const before = appServer.requests.length;
   await bridge.handleUpdate({ message: { chat: { id: 999 }, text: "파일 삭제" } });
   assert.equal(appServer.requests.length, before);
+});
+
+test("PC notification replies never start a task or answer a pending question", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  const reply = { message: { chat: { id: 123 }, text: "계속해줘",
+    reply_to_message: { message_id: 900, text: "PC 응답 도착" } } };
+  const before = appServer.requests.length;
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.requests.length, before);
+  assert.match(telegram.messages.at(-1).text, /PC에서 후속 지시/);
+  await bridge.submitLocalPrompt("작업");
+  ask(appServer, [{ id: "q1", question: "선택하세요" }]);
+  await tick();
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.responses.length, 0);
+});
+
+test("known current-task replies steer, but an old turn cannot steer a new turn", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("작업");
+  await bridge.handleUpdate(message("/status"));
+  const statusId = telegram.messages.at(-1).message_id;
+  const reply = { message: { chat: { id: 123 }, text: "추가 지시", reply_to_message: { message_id: statusId } } };
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.requests.at(-1).method, "turn/steer");
+  complete(appServer);
+  await tick();
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => method === "turn/start"
+    ? { turn: { id: "turn-new" } } : request(method, params);
+  await bridge.submitLocalPrompt("별도 작업");
+  const before = appServer.requests.length;
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.requests.length, before);
+  assert.equal(bridge.activeTurnId, "turn-new");
+});
+
+test("reply identity is checked again when queued input runs after a thread change", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.handleUpdate(message("/status"));
+  const id = telegram.messages.at(-1).message_id;
+  let release;
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => {
+    if (method === "thread/start") {
+      await new Promise((resolve) => { release = resolve; });
+      return { thread: { id: "thread-new" } };
+    }
+    return request(method, params);
+  };
+  const changing = bridge.handleUpdate(message("/new"));
+  await tick();
+  const replying = bridge.handleUpdate({ message: { chat: { id: 123 }, text: "이전 대화 지시",
+    reply_to_message: { message_id: id } } });
+  release();
+  await Promise.all([changing, replying]);
+  assert.equal(bridge.threadId, "thread-new");
+  assert.equal(appServer.requests.filter((r) => r.method === "turn/start").length, 0);
+  assert.match(telegram.messages.at(-1).text, /답장 대상의 작업이 바뀌었습니다/);
+});
+
+test("a direct reply to the delivered free-text question is accepted once", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("질문하기");
+  ask(appServer, [{ id: "q1", question: "이름은?" }]);
+  await tick();
+  const reply = { message: { chat: { id: 123 }, text: "합성 답변",
+    reply_to_message: { message_id: telegram.messages.at(-1).message_id } } };
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.responses.length, 1);
+  await bridge.handleUpdate(reply);
+  assert.equal(appServer.responses.length, 1);
+});
+
+test("long results have a bounded preview and an exact UTF-8 detail without disk persistence", async (t) => {
+  const { appServer, telegram, bridge, statePath } = await startFixture(t);
+  await bridge.submitLocalPrompt("작업");
+  const body = "한글 😀 결과\r\n".repeat(800) + "마지막 검토 필요";
+  complete(appServer, { text: body });
+  await tick();
+  assert.ok(telegram.messages.at(-1).text.length < 1600);
+  assert.match(telegram.messages.at(-1).text, /검토 필요/);
+  const data = telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
+  await bridge.handleUpdate({ callback_query: { id: "detail", data, message: { chat: { id: 123 } } } });
+  assert.ok(telegram.documents.at(-1).text.endsWith(body));
+  assert.equal(telegram.documents.at(-1).text, bridge.lastResult.text);
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(statePath, "utf8"))), ["threadId"]);
+  await bridge.handleUpdate(message("/detail"));
+  assert.equal(telegram.documents.length, 2);
+});
+
+test("expired detail callbacks cannot fetch a different result and unknown chats cannot fetch any", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("작업");
+  complete(appServer, { text: "첫 결과" });
+  await tick();
+  const data = telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
+  bridge.lastResult = { ...bridge.lastResult, text: "다른 결과", detailToken: "new-token" };
+  await bridge.handleUpdate({ callback_query: { id: "expired", data, message: { chat: { id: 123 } } } });
+  await bridge.handleUpdate({ message: { chat: { id: 999 }, text: "/detail" } });
+  assert.equal(telegram.documents.length, 0);
+  assert.match(telegram.callbacks[0].text, /만료/);
+});
+
+test("detail delivery binds the chosen result before callback acknowledgement yields", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("작업");
+  complete(appServer, { text: "요청한 결과" });
+  await tick();
+  const data = telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
+  telegram.answerCallbackQuery = async () => {
+    bridge.lastResult = { ...bridge.lastResult, text: "새 결과", detailToken: "new-token" };
+  };
+  await bridge.handleUpdate({ callback_query: { id: "race", data, message: { chat: { id: 123 } } } });
+  assert.match(telegram.documents.at(-1).text, /요청한 결과/);
+  assert.doesNotMatch(telegram.documents.at(-1).text, /새 결과/);
+});
+
+test("detail failures remain recoverable and unsupported attachments receive a response", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("작업");
+  complete(appServer);
+  await tick();
+  telegram.sendTextDocument = async () => { throw new Error("synthetic failure"); };
+  await bridge.handleUpdate(message("/detail"));
+  assert.match(telegram.messages.at(-1).text, /전체 결과 파일을 보내지 못했습니다/);
+  assert.match(bridge.lastResult.text, /수정 완료/);
+  const before = appServer.requests.length;
+  await bridge.handleUpdate({ message: { chat: { id: 123 }, photo: [{ file_id: "synthetic" }] } });
+  assert.match(telegram.messages.at(-1).text, /텍스트 입력만 지원/);
+  assert.equal(appServer.requests.length, before);
+});
+
+test("delayed approval cleanup cannot replace an older result notification with a newer result", async (t) => {
+  const { appServer, telegram, bridge } = await startFixture(t);
+  await bridge.submitLocalPrompt("first");
+  appServer.emit("request", { id: 80, method: "item/commandExecution/requestApproval", params: {
+    threadId: "thread-1", turnId: "turn-1", command: "synthetic command",
+  } });
+  await tick();
+  let release;
+  telegram.removeKeyboard = () => new Promise((resolve) => { release = resolve; });
+  complete(appServer, { text: "older result" });
+  await tick();
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => method === "turn/start"
+    ? { turn: { id: "turn-new" } } : request(method, params);
+  await bridge.submitLocalPrompt("second");
+  complete(appServer, { id: "turn-new", text: "newer result" });
+  await tick();
+  release();
+  await tick();
+  assert.equal(telegram.messages.filter((m) => m.text.includes("older result")).length, 1);
+  assert.equal(telegram.messages.filter((m) => m.text.includes("newer result")).length, 1);
+  assert.match(bridge.lastResult.text, /newer result/);
 });

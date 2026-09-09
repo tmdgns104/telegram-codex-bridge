@@ -6,7 +6,7 @@
   "description": "A private Telegram front end for a local Codex app-server.",
   "scripts": {
     "start": "node src/index.mjs",
-    "check": "node --check src/index.mjs && node --check src/bridge.mjs && node --check src/format.mjs && node --check src/telegram-client.mjs && node --check src/app-server-client.mjs && node --check src/singleton.mjs && node --check src/local-control.mjs && node --check scripts/codex-tg.mjs",
+    "check": "node --check src/index.mjs && node --check src/bridge.mjs && node --check src/format.mjs && node --check src/telegram-client.mjs && node --check src/app-server-client.mjs && node --check src/singleton.mjs && node --check src/local-control.mjs && node --check scripts/codex-tg.mjs && node --check src/result-presentation.mjs && node --check src/notification-delivery.mjs && node --check scripts/notify.mjs && python -m py_compile scripts/codex-telegram-notify.py",
     "test": "node --test \"test/*.test.mjs\"",
     "prompt": "node scripts/codex-tg.mjs",
     "smoke:app-server": "node scripts/smoke-app-server.mjs",

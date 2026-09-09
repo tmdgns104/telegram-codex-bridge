@@ -58,6 +58,19 @@ thread-ID state file.
 
 ## Global completion notifications
 
-Codex's global `notify` command receives one JSON argument for supported events, currently `agent-turn-complete`. The bundled router calls any previously configured notifier first, then calls the bridge Telegram notifier. The bridge marks its app-server child environment with `TELEGRAM_CODEX_BRIDGE_CHILD=1` so Telegram-originated work is not reported twice.
+Codex's global `notify` command receives one JSON argument for supported events, currently `agent-turn-complete`. The bundled router preserves the previous notifier and calls the Python bridge notifier. That entrypoint passes UTF-8 stdin to `scripts/notify.mjs`, sharing `TelegramClient` and the result formatter. The bridge marks its app-server child environment with `TELEGRAM_CODEX_BRIDGE_CHILD=1` so Telegram-originated work is not reported twice.
 
 This global hook does not carry approval responses or follow-up questions. Start unattended work through the Telegram bridge when remote interaction is required.
+
+PC notifications use a neutral response-arrived label: a completed turn is not a verified successful task.
+Title/recap-only JSON has no reliable provenance discriminator, so it is shown silently with its original
+JSON attached, not discarded. Long responses have a bounded excerpt and an in-memory generated UTF-8
+document. No arbitrary artifact paths are opened. Notification IDs are stable hashes of workdir/thread/turn.
+Attempt deduplication stores only hashes/timestamps for up to 1,000 events within 24 hours, with a short
+OS-released loopback lock serializing the disk transaction. Expired/evicted or unidentified events are outside
+this guarantee. Ambiguous deliveries are not replayed; use the original PC conversation for the result.
+
+Bridge results stay in memory and expose an expiring full-result button and `/detail`. Message replies
+must match the current thread/turn, and the identity is rechecked when queued input executes. During a
+question, only replies to delivered question messages are consumed as answers. Unknown, notification-only,
+old-session, and stale-task replies cannot silently start or steer the current task.

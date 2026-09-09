@@ -61,9 +61,10 @@ export class TelegramClient {
       const timer = setTimeout(abort, timeoutMs);
       let failure;
       try {
+        const multipart = body instanceof FormData;
         const response = await this.fetch(`${this.baseUrl}/${method}`, {
-          method: "POST", headers: { "content-type": "application/json" },
-          body: JSON.stringify(body), signal: controller.signal,
+          method: "POST", ...(multipart ? {} : { headers: { "content-type": "application/json" } }),
+          body: multipart ? body : JSON.stringify(body), signal: controller.signal,
         });
         const payload = await response.json();
         if (!response.ok || !payload.ok) {
@@ -108,6 +109,15 @@ export class TelegramClient {
       callback_query_id: callbackQueryId,
       text,
     });
+  }
+
+  sendTextDocument(chatId, text, filename, options = {}) {
+    const form = new FormData();
+    form.set("chat_id", String(chatId));
+    // Generated text only: never open a model-provided file path.
+    form.set("document", new Blob([text], { type: "text/plain;charset=utf-8" }), filename);
+    for (const [key, value] of Object.entries(options)) form.set(key, String(value));
+    return this.call("sendDocument", form);
   }
 
   removeKeyboard(chatId, messageId) {

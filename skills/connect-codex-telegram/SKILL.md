@@ -1,6 +1,6 @@
 ---
 name: connect-codex-telegram
-description: Install, configure, verify, and troubleshoot a private Telegram front end for a local Codex CLI/app-server, including Telegram commands, streamed completion results, command/file/permission approval buttons, and Codex follow-up questions. Use when a user asks to control Codex from Telegram, reproduce the Telegram–Codex bridge on another Windows PC, configure BotFather tokens or chat IDs, diagnose bridge startup or Telegram Bot API errors, or package this integration for another person.
+description: Install, configure, verify, and troubleshoot a private Telegram front end for a local Codex CLI/app-server, including result previews, original-text downloads, approval buttons, and follow-up questions. Use when a user asks to control Codex from Telegram, reproduce this integration on another PC, configure bot credentials locally, or diagnose bridge and completion notification behavior.
 ---
 
 # Connect Codex to Telegram
@@ -68,6 +68,7 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
 - `references/architecture.md`: event flow and app-server request mapping. Read when modifying bridge behavior.
 - `references/troubleshooting.md`: known Windows, Telegram, and Codex failure modes. Read when setup or startup fails.
 - When changing task tracking or input handling, use the recovery and delivery regression cases in `references/troubleshooting.md`. The template includes `/pending`, explicit `/reconnect`, and PC receipts with `codex-tg.cmd --status`.
+- Result previews use a shared Node formatter. The Python global notify entrypoint retains its argv interface and sends UTF-8 stdin to Node. Test this full entrypoint with a mocked HTTP sender, including concurrency and Unicode. `/detail` retrieves only generated result text; it does not upload arbitrary local artifacts.
 - `references/stot-template.md`: durable project-history template. Read when asked to remember or hand off work.
 
 ## Completion report

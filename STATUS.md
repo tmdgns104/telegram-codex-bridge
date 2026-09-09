@@ -1,9 +1,19 @@
 # Telegram Codex Bridge — Current Status
 
 Updated: 2026-09-09
-Current Task: [TASK-002](tasks/TASK-002-reliable-user-flow.md)
-Status: COMPLETE — acceptance PASS; GitHub publication verified
+Current Task: [TASK-003](tasks/TASK-003-readable-notifications.md)
+Status: VERIFIED — TASK-003 acceptance PASS; publication pending
 Repository: https://github.com/tmdgns104/telegram-codex-bridge (public, main)
+
+TASK-003은 승인된 첫 사용성 개선 범위다. PC 알림과 브리지 출력 경로를 함께 다루며,
+기존 TASK-001/002와 검증 이력은 보존한다.
+
+- 구현: 중립적인 PC 알림, 제목/요약형 무음 표시와 JSON 원문 보존, 제한된 이벤트 중복 억제,
+  프로젝트/작업 구분, 미리보기와 전체 원문, 다른 작업에 대한 답장 차단.
+- 검증: 프로젝트와 임시 설치본 check 및 테스트 85/85 PASS, 실제 Codex smoke PASS,
+  두 스킬 validator PASS. [Evidence](evidence/TASK-003/verification.md)
+- UNVERIFIED: 실제 Telegram 화면·운영 브리지 재시작. 실제 모델 작업은 실행하지 않음.
+- Next: 게시 확인 후 현재 운영 작업 종료 → 브리지 재시작 → /last, /detail 및 답장 동작 확인.
 
 TASK-002: 연결 종료/미확인 상태, `/pending`, `/reconnect`, PC 접수 번호/조회,
 비밀 질문 차단을 구현했다. check 및 테스트 61/61 PASS, 실제 Codex handshake와

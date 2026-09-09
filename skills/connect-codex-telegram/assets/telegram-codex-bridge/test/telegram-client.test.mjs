@@ -65,3 +65,21 @@ test("stop aborts long polling instead of waiting for the Telegram timeout", asy
   client.stop();
   await polling;
 });
+
+test("generated text documents use multipart with exact Unicode and no JSON content-type", async () => {
+  const source = "한글 😀\r\n:codex-file-citation{path=\"C:/synthetic/file.txt\"}";
+  let calls = 0;
+  const client = new TelegramClient("synthetic", { fetchImpl: async (url, init) => {
+    calls++;
+    assert.match(url, /\/sendDocument$/);
+    assert.equal(init.headers, undefined);
+    assert.ok(init.body instanceof FormData);
+    assert.equal(await init.body.get("document").text(), source);
+    assert.equal(init.body.get("document").name, "result.txt");
+    assert.equal(init.body.get("chat_id"), "123");
+    assert.equal(init.body.get("disable_notification"), "true");
+    return response(200, { ok: true, result: { message_id: 8 } });
+  } });
+  assert.equal((await client.sendTextDocument("123", source, "result.txt", { disable_notification: true })).message_id, 8);
+  assert.equal(calls, 1);
+});

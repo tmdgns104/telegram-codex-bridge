@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import fs from "node:fs";
 import { finalAgentMessage, formatApproval, formatDuration } from "./format.mjs";
+import { projectName, resultPreview, shortTaskId } from "./result-presentation.mjs";
 
 const CALLBACK_ACTIONS = new Set(["accept", "decline", "cancel", "grant", "deny"]);
 const ACTIVITY_LABELS = {
@@ -19,6 +20,7 @@ export const BRIDGE_DEVELOPER_INSTRUCTIONS = [
   "First use a sandbox-compatible alternative and treat expected probe failures (for example, a directory not being a Git repository or an optional tool being unavailable) as findings rather than reasons to escalate.",
   "Avoid Get-CimInstance and Win32_Process inspection in the Windows sandbox; use Get-Process or other non-WMI checks when possible.",
   "Request an outside-sandbox retry only when it is necessary for the user's requested outcome and the sandbox denial has been verified.",
+  "The user reads results on a phone. Begin the final response with a concise outcome, any failed or unverified criteria, and the next required user action. Put supporting details after that. Never label the user's whole task successful merely because a turn ended.",
 ].join(" ");
 
 export class CodexTelegramBridge {
@@ -42,6 +44,7 @@ export class CodexTelegramBridge {
     this.connectionState = "connecting";
     this.secretInputBlocked = false;
     this.threadWasUsed = true;
+    this.messageTargets = new Map();
 
     appServer.on("request", (request) => {
       void this.#onServerRequest(request).catch((error) => this.logger.error("Codex 요청 처리 실패", error));
@@ -87,8 +90,15 @@ export class CodexTelegramBridge {
     }
 
     if (update.callback_query) return this.#handleCallback(update.callback_query);
+    if (update.message?.reply_to_message && !this.#canReplyTo(update.message.reply_to_message.message_id)) {
+      await this.#send("이 메시지는 현재 제어 중인 작업의 답장 대상이 아닙니다. PC 알림에는 PC에서 후속 지시를 보내세요. 현재 작업은 /status, /where로 확인할 수 있습니다.");
+      return;
+    }
     const text = update.message?.text?.trim();
-    if (!text) return;
+    if (!text) {
+      if (update.message) await this.#send("현재는 텍스트 입력만 지원합니다. 사진·파일·음성의 내용을 글로 설명해주세요.");
+      return;
+    }
 
     if (!text.startsWith("/") && this.secretInputBlocked) {
       await this.#send("민감한 입력은 받지 않습니다. PC에서 설정을 마친 뒤 /cancel, /new 순서로 새 대화를 시작하세요.");
@@ -103,7 +113,11 @@ export class CodexTelegramBridge {
       return this.#answerCurrentQuestion(text);
     }
     if (text.startsWith("/")) return this.#handleCommand(text);
-    return this.#enqueueInput(() => this.#submitPrompt(text)).catch((error) =>
+    const replyId = update.message?.reply_to_message?.message_id;
+    return this.#enqueueInput(() => {
+      if (replyId && !this.#canReplyTo(replyId)) throw new Error("답장 대상의 작업이 바뀌었습니다. /status로 현재 작업을 확인하세요.");
+      return this.#submitPrompt(text);
+    }).catch((error) =>
       error.outcome === "unknown" ? undefined : this.#send(this.#promptErrorText(error)));
   }
 
@@ -239,6 +253,7 @@ export class CodexTelegramBridge {
         "일반 메시지: Codex에 작업 지시",
         "/status — 진행 상황·경과 시간·승인 대기 확인",
         "/last — 최근 완료·실패·중단 결과 다시 보기",
+        "/detail — 최근 결과의 전체 원문 파일 받기",
         "/pending — 놓친 승인·질문 다시 받기",
         "/reconnect — 연결 재설정 (진행 중 작업이 중단될 수 있음)",
         "/new — 새 Codex 대화",
@@ -254,11 +269,11 @@ export class CodexTelegramBridge {
       return;
     }
     if (command === "/last") {
-      await this.#send(this.lastResult
-        ? this.lastResult.text
-        : "아직 조회할 결과가 없습니다. 최근 결과는 브리지를 실행한 동안만 보관됩니다.");
+      if (this.lastResult) await this.#sendResult(this.lastResult);
+      else await this.#send("아직 조회할 결과가 없습니다. 최근 결과는 브리지를 실행한 동안만 보관됩니다.");
       return;
     }
+    if (command === "/detail") return this.#sendDetail();
     if (command === "/where") {
       await this.#send(`📁 ${this.config.workdir}\nSandbox: ${this.config.sandbox}\n승인 정책: ${this.config.approvalPolicy}`);
       return;
@@ -348,6 +363,16 @@ export class CodexTelegramBridge {
 
   async #handleCallback(query) {
     const parts = String(query.data || "").split(":");
+    if (parts[0] === "r") {
+      const result = this.lastResult;
+      if (parts.length !== 2 || parts[1] !== result?.detailToken) {
+        await this.telegram.answerCallbackQuery(query.id, "이 결과는 만료됐습니다. /last로 최근 결과를 확인하세요.");
+        return;
+      }
+      await this.telegram.answerCallbackQuery(query.id, "전체 결과를 보내겠습니다.");
+      await this.#sendDetail(result);
+      return;
+    }
     if (parts[0] === "q") return this.#handleQuestionOption(query, parts);
     if (parts.length !== 3 || parts[0] !== "a" || !CALLBACK_ACTIONS.has(parts[2])) {
       await this.telegram.answerCallbackQuery(query.id, "유효하지 않은 버튼입니다.");
@@ -443,7 +468,8 @@ export class CodexTelegramBridge {
         await this.telegram.removeKeyboard(this.config.allowedChatId, sent.message_id).catch(() => {});
       }
     } else {
-      await this.telegram.sendMessage(this.config.allowedChatId, this.#withWorkdir(`${prefix}\n\n답변을 일반 메시지로 보내세요.`), { retry: true });
+      const sent = await this.telegram.sendMessage(this.config.allowedChatId, this.#withWorkdir(`${prefix}\n\n답변을 일반 메시지로 보내세요.`), { retry: true });
+      if (this.pendingUserInput === pending && pending.index === index) pending.messageIds.add(sent.message_id);
     }
     if (this.pendingUserInput === pending && pending.index === index) pending.questionReady = true;
   }
@@ -538,7 +564,7 @@ export class CodexTelegramBridge {
         }
       }
       const status = params.turn.status;
-      const heading = status === "completed" ? "✅ 작업 완료" : status === "interrupted" ? "⏹️ 작업 중단됨" : "❌ 작업 실패";
+      const heading = status === "completed" ? "📩 Codex 응답 완료" : status === "interrupted" ? "⏹️ 작업 중단됨" : "❌ 작업 실패";
       const body = status === "failed"
         ? params.turn.error?.message || "알 수 없는 오류"
         : finalAgentMessage(params.turn, this.agentText);
@@ -546,10 +572,12 @@ export class CodexTelegramBridge {
       const durationMs = params.recovered ? null : this.now() - (this.turnStartedAt ?? this.startingAt ?? this.now());
       const text = `${heading}\n소요 시간: ${formatDuration(durationMs)}\n\n${body}`;
       // Save before delivery: /last can recover a result after a Telegram send failure.
-      this.lastResult = { turnId: params.turn.id, heading, durationMs, text };
+      const result = { threadId: this.threadId, turnId: params.turn.id, heading, durationMs, text,
+        detailToken: crypto.randomBytes(8).toString("hex") };
+      this.lastResult = result;
       this.turnStartedAt = null;
       await Promise.allSettled(cleanup);
-      await this.#send(text);
+      await this.#sendResult(result);
     }
   }
 
@@ -656,8 +684,46 @@ export class CodexTelegramBridge {
     }
   }
 
-  #send(text) {
-    return this.telegram.sendMessage(this.config.allowedChatId, this.#withWorkdir(text));
+  #canReplyTo(messageId) {
+    if (this.pendingUserInput) return this.pendingUserInput.questionReady && this.pendingUserInput.messageIds.has(messageId);
+    const target = this.messageTargets.get(messageId);
+    if (!target || target.threadId !== this.threadId) return false;
+    if (this.activeTurnId) return target.turnId === this.activeTurnId;
+    return !target.turnId || target.turnId === this.lastResult?.turnId;
+  }
+
+  async #sendResult(result) {
+    const preview = resultPreview(result.text);
+    const sent = await this.telegram.sendMessage(this.config.allowedChatId,
+      this.#withWorkdir(preview.text, result.turnId, result.threadId), {
+        reply_markup: { inline_keyboard: [[{ text: "📄 전체 원문", callback_data: `r:${result.detailToken}` }]] },
+      });
+    this.#rememberMessage(sent, result.threadId, result.turnId);
+  }
+
+  async #sendDetail(result = this.lastResult) {
+    if (!result) return this.#send("아직 조회할 결과가 없습니다. /last로 확인하세요.");
+    try {
+      const id = shortTaskId(this.config.workdir, result.threadId, result.turnId);
+      await this.telegram.sendTextDocument(this.config.allowedChatId, result.text, `codex-${id}.txt`,
+        { caption: `📄 ${projectName(this.config.workdir)} · #${id} 전체 결과`, disable_notification: true });
+    } catch {
+      await this.#send("전체 결과 파일을 보내지 못했습니다. 잠시 뒤 /detail을 다시 보내세요. 최근 결과는 현재 브리지 메모리에 보관되어 있습니다.");
+    }
+  }
+
+  #rememberMessage(sent, threadId = this.threadId, turnId = this.activeTurnId) {
+    if (!sent?.message_id) return;
+    this.messageTargets.set(sent.message_id, { threadId, turnId });
+    if (this.messageTargets.size > 200) this.messageTargets.delete(this.messageTargets.keys().next().value);
+  }
+
+  async #send(text) {
+    const threadId = this.threadId;
+    const turnId = this.activeTurnId;
+    const sent = await this.telegram.sendMessage(this.config.allowedChatId, this.#withWorkdir(text));
+    this.#rememberMessage(sent, threadId, turnId);
+    return sent;
   }
 
   #announce(text) {
@@ -665,7 +731,8 @@ export class CodexTelegramBridge {
     void this.#send(text).catch((error) => this.logger.error("작업 접수 알림 전송 실패", error));
   }
 
-  #withWorkdir(text) {
-    return `📂 Codex 작업 경로: ${this.config.workdir}\n\n${text}`;
+  #withWorkdir(text, turnId = this.activeTurnId, threadId = this.threadId) {
+    const id = turnId ? ` · #${shortTaskId(this.config.workdir, threadId, turnId)}` : "";
+    return `📂 ${projectName(this.config.workdir)}${id}\n원격 제어 · 현재 프로젝트에 전달\n\n${text}`;
   }
 }

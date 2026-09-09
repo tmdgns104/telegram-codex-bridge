@@ -54,3 +54,12 @@ Verify `/help` first, then send a prompt that explicitly forbids edits. Change `
 - Restart or open a new Codex CLI session after changing global `config.toml`; an already running session may not reload it.
 - Direct CLI work gets completion notifications only. Use the Telegram bridge for remote approvals, questions, and cancellation.
 - If Telegram-originated work produces duplicate completion messages, confirm the app-server child receives `TELEGRAM_CODEX_BRIDGE_CHILD=1` and restart the bridge after updating it.
+
+## Review received messages
+
+- Trace the actual producer before editing: global notify scripts and the interactive bridge can use different formatters, chunkers, and state. A fix in only one path may not affect the user's sample.
+- An agent turn ending does not prove that the user's task succeeded. Use a neutral receipt label when outcome metadata is unavailable; preserve blockers, failed criteria, and required human actions in previews.
+- Classify title/recap-only output using verified event provenance and a narrow contract. Do not suppress every JSON response: a user-requested JSON result can be legitimate. Deduplicate by source event identity when available, not a global text match.
+- Distinguish notification-only PC sessions from controllable bridge tasks. Bind replies/actions to an exact task identity; never route a reply to an unrelated current workspace merely because it arrived in the same chat.
+- Check actual mobile presentation: local paths and desktop citation syntax are not downloadable artifacts, fixed-width splitting can break words or markup, and long reports need a short preview with an accessible complete result. File delivery requires an explicit allowed artifact mapping; do not open arbitrary paths extracted from model text.
+- Reproduce formatting issues offline with synthetic events and a mocked network sender: ordinary answer, human-review result, metadata-shaped output, legitimate JSON, a long Unicode report, and two different workspaces. Keep protected user log contents out of reusable fixtures. A text export alone does not establish original message boundaries, notification sounds, or mobile rendering.
