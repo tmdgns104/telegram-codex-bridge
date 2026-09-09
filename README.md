@@ -1,0 +1,155 @@
+# Telegram Codex Bridge
+
+PC에서 시작한 Codex 작업을 Telegram으로 확인하고, 필요한 승인과 답변을 보낼 수
+있는 개인용 브리지입니다.
+
+## 평소 사용 흐름
+
+1. `start.cmd`로 브리지를 실행합니다.
+2. Telegram에 작업을 보내거나 PC에서 `codex-tg.cmd "테스트하고 오류를 수정해줘"`를 실행합니다.
+3. `/status`로 경과 시간, 명령 실행·파일 수정 등 현재 활동, 승인·질문 대기를 확인합니다.
+4. 승인 버튼을 누르거나 질문에 답합니다. 작업 중 일반 메시지는 추가 지시로 전달됩니다.
+5. 완료 알림을 놓쳤다면 `/last`로 최근 결과를 다시 확인합니다. 중단하려면 `/cancel`을 보냅니다.
+
+`/last`는 완료·실패·중단 결과 중 가장 최근 1건을 브리지 메모리에 보관합니다.
+새 대화(`/new`)를 만들어도 조회할 수 있지만, 브리지를 재시작하면 지워집니다.
+진행 상황은 `/status`를 보냈을 때 조회하며, 주기적인 알림을 자동 전송하지 않습니다.
+
+## PC에서 작업을 시작하고 Telegram에서 승인하기
+
+브리지가 실행 중일 때 이 폴더의 `codex-tg.cmd`로 작업을 시작합니다.
+
+```powershell
+.\codex-tg.cmd "프로젝트 테스트하고 오류를 수정해줘"
+```
+
+이 명령은 별도 Codex CLI를 실행하지 않고, `127.0.0.1`에만 열린 인증된 로컬
+제어 통로를 통해 현재 Telegram 브리지의 Codex 세션으로 작업을 보냅니다. 명령
+실행, 파일 변경, 추가 권한, 사용자 선택이 필요하면 Telegram에서 일회용 버튼으로
+결정하고 결과도 Telegram에서 받습니다.
+
+브리지가 보내는 작업 시작·승인·질문·완료 메시지 맨 위에는 현재 Codex 작업
+경로가 표시됩니다.
+
+일반 `codex` 또는 Codex 앱으로 직접 시작한 독립 세션은 이 승인 경로를 사용하지
+않습니다. 원격 승인이 필요한 PC 작업은 `codex-tg.cmd`로 시작해야 합니다.
+
+Telegram을 내 PC의 Codex `app-server`에 연결하는 개인용 브리지입니다.
+
+- Telegram 메시지로 Codex 작업 시작
+- 진행 중인 작업에 추가 지시 전달
+- 명령 실행·파일 변경·추가 권한을 Telegram 버튼으로 승인 또는 거부
+- Codex의 선택형·주관식 질문을 Telegram에서 답변
+- 작업 완료·실패·중단 결과 수신
+- 외부 포트를 열지 않는 Telegram long polling
+- 하나의 `ALLOWED_CHAT_ID`만 허용
+- 같은 봇 설정의 중복 실행을 시작 단계에서 자동 차단
+
+## 요구 사항
+
+- Node.js 20 이상
+- 설치 및 로그인된 Codex CLI
+- Telegram `@BotFather`가 발급한 봇 토큰
+
+현재 PC에서는 PowerShell 실행 정책 때문에 `codex` 대신 `codex.cmd`를 사용합니다.
+
+## 1. Telegram 봇 만들기
+
+1. Telegram에서 `@BotFather`를 엽니다.
+2. `/newbot`을 실행하고 봇 이름과 username을 정합니다.
+3. 발급된 토큰을 안전하게 보관합니다.
+4. 만든 봇과 대화를 열고 `/start`를 한 번 보냅니다.
+
+## 2. 설정
+
+`.env.example`을 `.env`로 복사합니다.
+
+```powershell
+Copy-Item .env.example .env
+notepad .env
+```
+
+먼저 `TELEGRAM_BOT_TOKEN`만 입력한 뒤 chat ID를 확인합니다.
+
+```powershell
+npm.cmd run discover:chat-id
+```
+
+출력된 숫자를 `ALLOWED_CHAT_ID`에 넣고, Codex가 작업할 절대 경로를
+`CODEX_WORKDIR`에 넣습니다.
+
+```env
+TELEGRAM_BOT_TOKEN=123456789:실제_토큰
+ALLOWED_CHAT_ID=123456789
+CODEX_WORKDIR=C:\projects\my-project
+```
+
+`.env`와 `.state.json`은 Git에서 제외됩니다.
+
+## 3. 점검 및 실행
+
+```powershell
+npm.cmd run check
+npm.cmd test
+npm.cmd run smoke:app-server
+start.cmd
+```
+
+실행 후 Telegram에서 `/help`를 보냅니다.
+
+## Telegram 명령
+
+- 일반 메시지: 새 Codex 작업을 시작하거나 진행 중인 작업에 추가 지시
+- `/status`: 현재 활동, 경과 시간, 승인·질문 대기 상태
+- `/last`: 최근 완료·실패·중단 결과와 소요 시간 다시 보기
+- `/new`: 새 Codex 스레드 생성
+- `/cancel`: 진행 중인 turn 중단
+- `/where`: 작업 경로와 권한 설정 확인
+- `/help`: 도움말
+
+## 보안 기본값
+
+- Sandbox는 `workspace-write` 또는 `read-only`만 허용합니다.
+- 승인 정책 `never`와 Sandbox `danger-full-access`는 설정 단계에서 거부합니다.
+- 세션 전체 승인은 Telegram UI에 제공하지 않습니다.
+- 추가 권한은 요청받은 범위 그대로 이번 turn에만 허용합니다.
+- 승인 callback은 한 번 처리된 후 만료됩니다.
+- 허용된 개인 chat ID 외의 메시지는 무시합니다.
+- 같은 Bot 토큰과 chat ID로 이미 실행 중이면 두 번째 프로세스는 Telegram 연결 전에 종료됩니다.
+
+Telegram 봇 채팅은 종단간 암호화가 아닙니다. API 키, 비밀번호, 복구 코드와
+같은 비밀정보를 Codex 질문에 답변하는 방식으로 전송하지 마세요.
+
+## 운영 참고
+
+- PC가 켜져 있고 `start.cmd`가 실행 중이어야 합니다.
+- 동시에 터미널 TUI와 Telegram에서 같은 스레드를 조작하지 않는 것을 권장합니다.
+- 브리지가 마지막 `threadId`를 `.state.json`에 저장하고 다음 실행 때 재개합니다.
+- `codex app-server`를 인터넷에 직접 노출하지 않습니다.
+- PC와 Telegram 입력이 겹치면 도착한 순서대로 처리합니다. 작업 하나를 시작하고
+  나머지 메시지는 그 작업에 추가 지시로 전달합니다. 별도 작업 대기열은 아닙니다.
+- 작업 접수 알림이 늦거나 실패해도 접수된 작업은 계속됩니다. 다시 보내기 전에
+  `/status`를 확인하세요. 완료 알림 전송 실패는 `/last`로 확인할 수 있습니다.
+- 코드 업데이트는 실행 중 작업이 끝난 뒤 기존 브리지를 종료하고 `start.cmd`로
+  다시 실행하면 적용됩니다. 두 번째 브리지를 먼저 띄우면 중복 실행 차단이 동작합니다.
+
+## 코드 구조와 검증
+
+흐름은 `src/index.mjs` → `src/bridge.mjs` → `src/app-server-client.mjs`입니다.
+Telegram 통신은 `src/telegram-client.mjs`, PC 입력은 `src/local-control.mjs`,
+메시지 표현은 `src/format.mjs`에서 담당합니다. 새 기능을 읽을 때는 bridge의
+입력 처리, 상태 조회, Codex 알림 처리 순서로 살펴보면 됩니다.
+
+`npm.cmd test`는 실제 Telegram 메시지나 Codex 작업을 보내지 않고 상태 전이,
+동시 입력, 알림 실패, 승인·질문 처리를 검증합니다. `npm.cmd run smoke:app-server`는
+실제 Codex 연결과 읽기 전용 임시 스레드 생성을 확인하며 모델 작업은 실행하지 않습니다.
+현재 작업·검증 결과는 `STATUS.md`와 `tasks/`에 있습니다. 기존 설치본의
+`STOT.md`는 로컬 운영 이력이며 개인 환경 정보가 포함되어 GitHub에서 제외합니다.
+
+## PC에서 직접 시작한 Codex 작업 알림
+
+Telegram에서 시작한 작업은 승인·질문·완료를 모두 봇에서 처리합니다. 별도의
+Codex CLI에서 직접 시작한 작업도 전역 `notify` hook을 설정하면 완료 결과를
+Telegram으로 받을 수 있습니다. 현재 공식 `notify` 이벤트는
+`agent-turn-complete`만 지원하므로 직접 시작한 CLI 작업의 승인과 질문은 해당
+터미널에서 처리해야 합니다.

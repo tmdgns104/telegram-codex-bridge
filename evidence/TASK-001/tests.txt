@@ -1,0 +1,43 @@
+
+> telegram-codex-bridge@0.1.0 test
+> node --test "test/*.test.mjs"
+
+✔ 허용된 Telegram 메시지로 turn을 시작하고 완료 결과를 보낸다 (7.4741ms)
+✔ status에 경과 시간과 현재 활동을 표시하고 오래된 turn 이벤트는 무시한다 (2.6139ms)
+✔ status에 승인 대기를 표시하고 요청 해결 후 해제한다 (3.483ms)
+✔ last로 completed 결과를 다시 조회하고 결과 본문을 디스크에 저장하지 않는다 (5.864ms)
+✔ last로 failed 결과를 다시 조회하고 결과 본문을 디스크에 저장하지 않는다 (4.3816ms)
+✔ last로 interrupted 결과를 다시 조회하고 결과 본문을 디스크에 저장하지 않는다 (3.4706ms)
+✔ PC와 Telegram의 동시 입력은 하나의 시작과 추가 지시로 처리한다 (1.8071ms)
+✔ 실패한 시작 요청 뒤에도 다음 입력을 처리한다 (1.5158ms)
+✔ 시작 응답 전 완료되어도 진행 중으로 되돌리지 않는다 (1.9196ms)
+✔ 작업 시작 중 status는 응답하고 cancel은 시작 응답 뒤 실행한다 (3.2639ms)
+✔ 접수 알림 전송 실패나 지연이 PC 접수 결과를 실패시키지 않는다 (1.288ms)
+✔ 완료 알림 전송 실패 후 last로 복구한다 (2.2805ms)
+✔ 질문 설명과 답변 대기 상태를 표시하고 텍스트 답변 시 이전 버튼을 만료한다 (3.3392ms)
+✔ 질문 버튼을 동시에 두 번 눌러도 다음 질문의 답변으로 재사용하지 않는다 (2.0402ms)
+✔ resolved 알림이 질문과 버튼을 정리하여 다음 메시지가 답변으로 소비되지 않는다 (2.4504ms)
+✔ completed 알림이 질문과 버튼을 정리하여 다음 메시지가 답변으로 소비되지 않는다 (1.8602ms)
+✔ 승인 메시지가 전송되는 동안 작업이 끝나도 늦게 나타난 버튼을 제거한다 (1.863ms)
+✔ 스레드에 불필요한 샌드박스 외부 재시도를 막는 지침을 전달한다 (2.068ms)
+✔ 명령 승인 버튼을 app-server 응답으로 한 번만 전달한다 (2.5252ms)
+✔ 허용되지 않은 chat_id의 명령을 무시한다 (1.8828ms)
+✔ 안전하지 않은 danger-full-access를 거부한다 (0.8894ms)
+✔ 기본 설정은 workspace-write와 on-request다 (0.341ms)
+✔ Telegram 길이에 맞춰 메시지를 분할한다 (1.0391ms)
+✔ 명령 승인에는 명령과 작업 경로가 표시된다 (0.425ms)
+✔ 샌드박스 재시도 사유를 한국어로 설명한다 (0.2107ms)
+✔ 완료 turn의 마지막 agentMessage를 선택한다 (0.2011ms)
+✔ local control address and key are deterministic per bot and chat (1.4444ms)
+✔ PC prompt is authenticated and forwarded to the bridge handler (25.041ms)
+✔ local control rejects requests without the derived key (4.4177ms)
+✔ 같은 봇 설정은 동일한 singleton 포트를 만든다 (0.829ms)
+✔ 두 번째 브리지 잠금을 거부하고 종료 후 다시 허용한다 (20.4691ms)
+ℹ tests 31
+ℹ suites 0
+ℹ pass 31
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 140.5932

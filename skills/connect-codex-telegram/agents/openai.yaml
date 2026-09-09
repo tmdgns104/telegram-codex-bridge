@@ -1,0 +1,4 @@
+interface:
+  display_name: "Connect Codex to Telegram"
+  short_description: "Set up a private Telegram front end for local Codex"
+  default_prompt: "Use $connect-codex-telegram to install and verify a secure local Telegram bridge for Codex."

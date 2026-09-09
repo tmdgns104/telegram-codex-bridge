@@ -1,0 +1,25 @@
+{
+  "basis": "Git index blob bytes (Git-normalized line endings)",
+  "files": [
+    {
+      "path": "src/bridge.mjs",
+      "sha256": "f330a5daf353997301e1ba2fdeb11dcee5c45ccd4c99818d47f3354169452272"
+    },
+    {
+      "path": "src/format.mjs",
+      "sha256": "00bf58ea13b1ee7c1e3356b978960c05ed987bfa8fb5532cc8a5f99e9674e679"
+    },
+    {
+      "path": "test/bridge.test.mjs",
+      "sha256": "6134f0341b449d453a0663fd5f80177a7e3f72197873136aad52f609b91f5911"
+    },
+    {
+      "path": "package.json",
+      "sha256": "b7a7d532549f20b25ef8a56ecaf4ff0ecea3ab429391fcf93fbc0c48cde9778a"
+    },
+    {
+      "path": "README.md",
+      "sha256": "ad6df67228ae22a17b47de5e8fdc52a73f008d491a011fb262035255bfb01cd0"
+    }
+  ]
+}

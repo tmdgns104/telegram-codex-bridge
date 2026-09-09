@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.state.json
+.schema/
+node_modules/
+npm-debug.log*
+bridge*.log
+codex-notify-chain.json
+dist/
+__pycache__/
+*.pyc
+*.bak
+*.bak-*
+/STOT.md
+/evidence/**/smoke.txt

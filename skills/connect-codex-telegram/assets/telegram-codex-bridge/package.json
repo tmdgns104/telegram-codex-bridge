@@ -1,0 +1,17 @@
+{
+  "name": "telegram-codex-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A private Telegram front end for a local Codex app-server.",
+  "scripts": {
+    "start": "node src/index.mjs",
+    "check": "node --check src/index.mjs && node --check src/bridge.mjs && node --check src/app-server-client.mjs && node --check src/singleton.mjs",
+    "test": "node --test \"test/*.test.mjs\"",
+    "smoke:app-server": "node scripts/smoke-app-server.mjs",
+    "discover:chat-id": "node scripts/discover-chat-id.mjs"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
