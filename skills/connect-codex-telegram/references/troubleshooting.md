@@ -1,5 +1,16 @@
 # Troubleshooting
 
+## Native PC permission requests
+
+Distinguish completion notify from synchronous PermissionRequest. Verify the current official hook contract and installed
+runtime before concluding that independent PC approvals are unavailable. A definition installed on disk is not proof of hook
+trust, actual invocation, or a successful Telegram round trip. Use doctor, the host's hook-review UI, a registered project root,
+and an actual supported approval request to establish those stages separately. Preserve other hooks and their deny decisions.
+For offline/expired requests return to the original PC approval flow; never turn missing evidence into allow.
+
+When adding media, queues or multiple projects, regress delayed input after project changes, stale result/file callbacks,
+failed task queue stops, restart without replay, download size limits, path traversal/links, and exact archived Unicode.
+
 ## Task tracking and concurrent input
 
 - Separate bridge receipt, Codex acceptance, and task completion. A response timeout after submission is an unknown outcome. Block new mutations until explicit recovery; never retry a Codex turn implicitly.

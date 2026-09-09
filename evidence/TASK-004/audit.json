@@ -1,0 +1,11 @@
+{
+  "index_paths": 123,
+  "reachable_history_blobs": 103,
+  "forbidden_paths": 0,
+  "credential_pattern_matches": 0,
+  "manifest_files": 43,
+  "parity_files_per_copy": 42,
+  "copies_checked": 3,
+  "skill_documents": "PASS",
+  "utf8_documents": "PASS"
+}

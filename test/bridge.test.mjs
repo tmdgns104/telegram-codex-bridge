@@ -5,6 +5,7 @@ import path from "node:path";
 import test from "node:test";
 import assert from "node:assert/strict";
 import { BRIDGE_DEVELOPER_INSTRUCTIONS, CodexTelegramBridge } from "../src/bridge.mjs";
+import { WorkspaceStore } from "../src/workspace-store.mjs";
 
 class FakeAppServer extends EventEmitter {
   constructor() {
@@ -44,6 +45,8 @@ class FakeTelegram {
     this.documents.push({ chatId, text, filename, options });
     return { message_id: 10_000 + this.documents.length };
   }
+  async sendDocument(chatId, bytes, filename, options) { return this.sendTextDocument(chatId, bytes, filename, options); }
+  async downloadFile() { return Buffer.from("synthetic attachment"); }
 }
 
 function makeBridge(options = {}) {
@@ -86,6 +89,132 @@ test("허용된 Telegram 메시지로 turn을 시작하고 완료 결과를 보�
 });
 
 const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+test("delayed completion retains its project label after switching projects", async (t) => {
+  const f = workspaceFixture(t); await f.bridge.start();
+  const other = path.join(f.root, "other"); fs.mkdirSync(other); f.workspace.register(other);
+  await f.bridge.handleUpdate(message("work"));
+  f.appServer.emit("request", { id: 80, method: "item/commandExecution/requestApproval", params: { threadId: "thread-1", turnId: "turn-1", command: "synthetic" } });
+  await tick();
+  let release;
+  f.telegram.removeKeyboard = async () => new Promise((r) => { release = r; });
+  complete(f.appServer, { text: "original project response" }); await tick();
+  await f.bridge.handleUpdate(message("/project 2"));
+  release(); await tick();
+  const result = f.telegram.messages.findLast((m) => m.text.includes("original project response"));
+  assert.match(result.text, /📂 project ·/);
+  assert.doesNotMatch(result.text, /📂 other/);
+});
+
+test("approval decisions omitted by the server cannot be forged through a callback", async (t) => {
+  const f = await startFixture(t);
+  f.appServer.emit("request", { id: 8, method: "item/commandExecution/requestApproval", params: { threadId: "thread-1", turnId: "turn-1", command: "synthetic", availableDecisions: ["decline", "cancel"] } });
+  await tick();
+  const buttons = f.telegram.messages.at(-1).options.reply_markup.inline_keyboard.flat();
+  assert.ok(!buttons.some((b) => b.callback_data.endsWith(":accept")));
+  const data = buttons.find((b) => b.callback_data.endsWith(":decline")).callback_data.replace(/:decline$/, ":accept");
+  await f.bridge.handleUpdate({ callback_query: { id: "a", data, message: { chat: { id: 123 } } } });
+  assert.equal(f.appServer.responses.length, 0);
+  assert.equal(f.bridge.pendingCallbacks.size, 1);
+});
+
+test("file approvals include exact proposed paths and expose full changes without deciding", async (t) => {
+  const f = await startFixture(t); await f.bridge.handleUpdate(message("work"));
+  const changes = [{ path: "src/example.mjs", kind: { type: "update" }, diff: "-old\n+한글 new\n".repeat(300) }];
+  f.appServer.emit("notification", { method: "item/started", params: { threadId: "thread-1", turnId: "turn-1", item: { id: "file-1", type: "fileChange", changes } } });
+  f.appServer.emit("request", { id: 1, method: "item/fileChange/requestApproval", params: { threadId: "thread-1", turnId: "turn-1", itemId: "file-1" } });
+  await tick();
+  const prompt = f.telegram.messages.at(-1);
+  assert.match(prompt.text, /src\/example.mjs/);
+  const data = prompt.options.reply_markup.inline_keyboard.at(-1)[0].callback_data;
+  await f.bridge.handleUpdate({ callback_query: { id: "d", data, message: { chat: { id: 123 } } } });
+  assert.ok(f.telegram.documents[0].text.includes(changes[0].diff));
+  assert.equal(f.appServer.responses.length, 0);
+});
+
+function workspaceFixture(t) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "tg-workspace-"));
+  const project = path.join(root, "project"); fs.mkdirSync(project);
+  const workspace = new WorkspaceStore({ directory: path.join(root, "data"), workdir: project });
+  const fixture = makeBridge({ workspace, config: { allowedChatId: "123", workdir: project,
+    sandbox: "workspace-write", approvalPolicy: "on-request", statePath: path.join(root, "state.json") } });
+  t.after(() => fs.rmSync(root, { recursive: true, force: true }));
+  return { ...fixture, root, project, workspace };
+}
+
+test("explicit queued tasks start once after completion, pause on failure, and preserve ordinary steering", async (t) => {
+  const { bridge, appServer } = await startFixture(t);
+  let next = 0;
+  const request = appServer.request.bind(appServer);
+  appServer.request = async (method, params) => method === "turn/start"
+    ? (appServer.requests.push({ method, params }), { turn: { id: `turn-${++next}` } }) : request(method, params);
+  await bridge.handleUpdate(message("first"));
+  await bridge.handleUpdate(message("/queue add second"));
+  await bridge.handleUpdate(message("/queue add third"));
+  await bridge.handleUpdate(message("clarification"));
+  assert.equal(appServer.requests.at(-1).method, "turn/steer");
+  complete(appServer);
+  await tick(); await tick();
+  assert.equal(appServer.requests.filter((r) => r.method === "turn/start").length, 2);
+  assert.equal(bridge.taskQueue.length, 1);
+  complete(appServer, { id: "turn-2", status: "failed" });
+  await tick();
+  assert.equal(bridge.queueEnabled, false);
+  assert.equal(bridge.taskQueue.length, 1);
+  await bridge.handleUpdate(message("/queue run"));
+  await tick();
+  assert.equal(appServer.requests.filter((r) => r.method === "turn/start").length, 3);
+});
+
+test("project switching binds threads, rejects busy changes and preserves exact archived results across restart", async (t) => {
+  const f = workspaceFixture(t);
+  await f.bridge.start();
+  const other = path.join(f.root, "other"); fs.mkdirSync(other);
+  await f.bridge.handleUpdate(message(`/project add ${other}`));
+  await f.bridge.handleUpdate(message("work"));
+  await f.bridge.handleUpdate(message("/project 2"));
+  assert.equal(f.bridge.config.workdir, f.project);
+  complete(f.appServer, { text: "한글 원문" }); await tick();
+  await f.bridge.handleUpdate(message("/project 2"));
+  assert.equal(f.bridge.config.workdir, other);
+  assert.equal(f.bridge.lastResult, null);
+  await f.bridge.handleUpdate(message("/project 1"));
+  assert.match(f.bridge.lastResult.text, /한글 원문/);
+  await f.bridge.handleUpdate(message("/history 1"));
+  assert.equal(f.telegram.documents.at(-1).text, f.bridge.lastResult.text);
+  const restored = new WorkspaceStore({ directory: path.join(f.root, "data"), workdir: f.project });
+  assert.match(restored.results()[0].text, /한글 원문/);
+});
+
+test("photo, voice and document captions reach the selected Codex thread; secret questions reject downloads", async (t) => {
+  const f = workspaceFixture(t); await f.bridge.start();
+  for (const [field, value, expected] of [["photo", [{ file_id: "p" }], "localImage"], ["voice", { file_id: "v" }, "localAudio"], ["document", { file_id: "d", file_name: "report.pdf" }, "text"]]) {
+    await f.bridge.handleUpdate({ message: { chat: { id: 123 }, [field]: value, caption: "첨부 분석" } });
+    assert.equal(f.appServer.requests.at(-1).params.input[1].type, expected);
+    assert.equal(f.appServer.requests.at(-1).params.input[0].text, "첨부 분석");
+  }
+  let downloads = 0;
+  f.telegram.downloadFile = async () => { downloads++; return Buffer.alloc(0); };
+  f.bridge.secretInputBlocked = true;
+  await f.bridge.handleUpdate({ message: { chat: { id: 123 }, photo: [{ file_id: "p" }] } });
+  assert.equal(downloads, 0);
+});
+
+test("artifact buttons expire after project change and direct retrieval is user-requested", async (t) => {
+  const f = workspaceFixture(t); await f.bridge.start();
+  fs.writeFileSync(path.join(f.project, "report.txt"), "exact report");
+  await f.bridge.handleUpdate(message("/files"));
+  assert.equal(f.telegram.documents.length, 0);
+  const data = f.telegram.messages.at(-1).options.reply_markup.inline_keyboard[0][0].callback_data;
+  const other = path.join(f.root, "other"); fs.mkdirSync(other);
+  f.workspace.register(other);
+  await f.bridge.handleUpdate(message("/project 2"));
+  await f.bridge.handleUpdate({ callback_query: { id: "f", data, message: { chat: { id: 123 } } } });
+  assert.equal(f.telegram.documents.length, 0);
+  await f.bridge.handleUpdate(message("/project 1"));
+  await f.bridge.handleUpdate(message("/file report.txt"));
+  assert.equal(f.telegram.documents[0].text.toString(), "exact report");
+});
 const message = (text) => ({ message: { chat: { id: 123 }, text } });
 
 async function startFixture(t, options = {}) {
@@ -166,7 +295,7 @@ for (const status of ["completed", "failed", "interrupted"]) {
     await bridge.handleUpdate(message("/status"));
     assert.match(telegram.messages.at(-1).text, /대기 중[\s\S]*최근 작업/);
     assert.equal(bridge.activeTurnId, null);
-    assert.deepEqual(JSON.parse(fs.readFileSync(statePath, "utf8")), { threadId: "thread-1" });
+    assert.deepEqual(JSON.parse(fs.readFileSync(statePath, "utf8")), { threadId: "thread-1", workdir: process.cwd() });
     const count = telegram.messages.length;
     complete(appServer, { status });
     complete(appServer, { id: "older-turn", text: "오래된 결과" });
@@ -676,7 +805,7 @@ test("long results have a bounded preview and an exact UTF-8 detail without disk
   await bridge.handleUpdate({ callback_query: { id: "detail", data, message: { chat: { id: 123 } } } });
   assert.ok(telegram.documents.at(-1).text.endsWith(body));
   assert.equal(telegram.documents.at(-1).text, bridge.lastResult.text);
-  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(statePath, "utf8"))), ["threadId"]);
+  assert.deepEqual(Object.keys(JSON.parse(fs.readFileSync(statePath, "utf8"))), ["threadId", "workdir"]);
   await bridge.handleUpdate(message("/detail"));
   assert.equal(telegram.documents.length, 2);
 });
@@ -718,7 +847,7 @@ test("detail failures remain recoverable and unsupported attachments receive a r
   assert.match(telegram.messages.at(-1).text, /전체 결과 파일을 보내지 못했습니다/);
   assert.match(bridge.lastResult.text, /수정 완료/);
   const before = appServer.requests.length;
-  await bridge.handleUpdate({ message: { chat: { id: 123 }, photo: [{ file_id: "synthetic" }] } });
+  await bridge.handleUpdate({ message: { chat: { id: 123 }, video: { file_id: "synthetic" } } });
   assert.match(telegram.messages.at(-1).text, /텍스트 입력만 지원/);
   assert.equal(appServer.requests.length, before);
 });

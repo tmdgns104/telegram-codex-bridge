@@ -1,0 +1,10 @@
+
+> telegram-codex-bridge@0.2.0 doctor
+> node scripts/doctor.mjs --offline
+
+PASS · 브리지 설정: 토큰·채팅·경로·승인 정책 확인 (값 비공개)
+PASS · Node: v24.15.0
+PASS · Codex: codex-cli 0.153.4
+PASS · Codex 로그인: 로그인 상태 확인
+PASS · PC 승인 hook: 정의 설치됨. 신뢰 상태는 Codex /hooks에서 확인하세요.
+ACTION · 실행 중 브리지: start.cmd로 실행하세요.

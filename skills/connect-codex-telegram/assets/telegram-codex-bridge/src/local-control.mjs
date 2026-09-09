@@ -28,10 +28,11 @@ function writeResponse(socket, value) {
 }
 
 export class LocalControlServer {
-  constructor({ token, chatId, onPrompt, port, logger = console, maxReceipts = 1000 }) {
+  constructor({ token, chatId, onPrompt, onPermission, port, logger = console, maxReceipts = 1000 }) {
     this.key = deriveLocalControlKey(token, chatId);
     this.port = port ?? deriveLocalControlPort(token, chatId);
     this.onPrompt = onPrompt;
+    this.onPermission = onPermission;
     this.logger = logger;
     this.server = null;
     this.instanceId = crypto.randomUUID();
@@ -105,7 +106,19 @@ export class LocalControlServer {
       return;
     }
     if (request.action === "hello") {
-      writeResponse(socket, { ok: true, instanceId: this.instanceId });
+      writeResponse(socket, { ok: true, instanceId: this.instanceId, version: "0.2.0", nativeApprovals: Boolean(this.onPermission) });
+      return;
+    }
+    if (request.action === "permission") {
+      if (!this.onPermission) return writeResponse(socket, { ok: true, decision: "fallback" });
+      const controller = new AbortController();
+      const abort = () => controller.abort();
+      socket.once("close", abort);
+      try {
+        const result = await this.onPermission(request.event, controller.signal);
+        writeResponse(socket, { ok: true, ...result });
+      } catch { writeResponse(socket, { ok: true, decision: "fallback", reason: "invalid_request" }); }
+      finally { socket.off("close", abort); }
       return;
     }
     if (request.action === "status") {
@@ -207,7 +220,7 @@ export function getLocalTask({ token, chatId, requestId, port, timeoutMs = 5_000
   return sendLocalRequest({ token, chatId, port, timeoutMs, request: { action: "status", requestId } });
 }
 
-function sendLocalRequest({ token, chatId, request, port, timeoutMs }) {
+export function sendLocalRequest({ token, chatId, request, port, timeoutMs = 5000 }) {
   const selectedPort = port ?? deriveLocalControlPort(token, chatId);
   const payload = JSON.stringify({
     ...request,

@@ -1,6 +1,6 @@
 ---
 name: connect-codex-telegram
-description: Install, configure, verify, and troubleshoot a private Telegram front end for a local Codex CLI/app-server, including result previews, original-text downloads, approval buttons, and follow-up questions. Use when a user asks to control Codex from Telegram, reproduce this integration on another PC, configure bot credentials locally, or diagnose bridge and completion notification behavior.
+description: Install, configure, verify, and troubleshoot a private Telegram front end for Codex, including native PC permission hooks, approval details, attachments, project selection, queued work, and result history. Use when a user asks to control Codex from Telegram, reproduce this integration, or diagnose approval and notification behavior.
 ---
 
 # Connect Codex to Telegram
@@ -18,7 +18,7 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
    ```
 
    On POSIX, pass a POSIX destination. Refuse to overwrite an existing non-empty directory; inspect and patch existing installations instead.
-4. Tell the user to create a bot with the verified Telegram `@BotFather`. Never ask them to paste the token into chat. Have them enter it directly in the installed `.env`.
+4. Tell the user to create a bot with the verified Telegram `@BotFather`. Never ask them to paste the token into chat. Use the installed setup tool's hidden local input or edit `.env` locally.
 5. Have the user message the new bot with `/start`, then discover the numeric chat ID:
 
    ```powershell
@@ -43,7 +43,7 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
     python <skill-dir>\scripts\configure_codex_notify.py <bridge-dir>
     ```
 
-    Explain that official `notify` currently covers `agent-turn-complete` only. Full remote approvals and questions require starting the work through the Telegram bridge.
+    Completion `notify` and permission hooks are distinct interfaces. Do not infer that a notify limitation means native PC approval cannot be integrated. For native approval, verify the installed Codex hook contract, run `npm run setup -- --install-hook --non-interactive`, and have the user review/trust the definition through the supported Codex UI. Never bypass or manufacture trust. Register intended project roots using `/project add` before accepting their PC requests. Native follow-up questions are outside PermissionRequest; bridge-origin questions remain supported.
 11. Create or update `STOT.md` using `references/stot-template.md` after material setup or troubleshooting work. Record paths, versions, tests, decisions, and next actions; never record tokens, Codex auth, or secret answers.
 
 ## Safety invariants
@@ -54,8 +54,9 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
 - Accept messages and callback queries only from `ALLOWED_CHAT_ID`.
 - Acquire the bundled singleton lock before creating Telegram or app-server clients; a second process for the same bot must exit before polling.
 - Grant only the permissions Codex requested and scope them to the current turn.
+- Native PermissionRequest grants apply only to a live request. Timeout, delivery failure, disconnect, unregistered projects and invalid callbacks produce no allow decision. Keep this hook synchronous; other hooks' denials and the host approval policy still apply.
 - Never expose `codex app-server` on a public interface. The bundled bridge uses stdio and Telegram long polling.
-- Never print, quote, commit, archive, or copy `.env`, `.state.json`, Codex auth files, bot tokens, or bridge logs into the Skill.
+- Never print, quote, commit, archive, or copy `.env`, `.state.json`, `.bridge-data`, `.telegram-inbox`, Codex auth files, bot tokens, or bridge logs into the Skill.
 - Treat Telegram bot chats as non-E2E-encrypted. Do not collect API keys, passwords, recovery codes, or other secrets through Codex questions.
 - Preserve user changes when updating an existing bridge. Read the relevant files and patch narrowly.
 
@@ -68,7 +69,10 @@ Build from the bundled bridge template instead of recreating the JSON-RPC client
 - `references/architecture.md`: event flow and app-server request mapping. Read when modifying bridge behavior.
 - `references/troubleshooting.md`: known Windows, Telegram, and Codex failure modes. Read when setup or startup fails.
 - When changing task tracking or input handling, use the recovery and delivery regression cases in `references/troubleshooting.md`. The template includes `/pending`, explicit `/reconnect`, and PC receipts with `codex-tg.cmd --status`.
-- Result previews use a shared Node formatter. The Python global notify entrypoint retains its argv interface and sends UTF-8 stdin to Node. Test this full entrypoint with a mocked HTTP sender, including concurrency and Unicode. `/detail` retrieves only generated result text; it does not upload arbitrary local artifacts.
+- Result previews use a shared Node formatter. Test the Python notify entrypoint through Node and mocked HTTP, including concurrency and Unicode. `/detail` retrieves result text; `/files` and `/file` require an explicit user choice for a bounded project-local artifact.
+- Validate native hook stdin through a real child process and authenticated loopback, separately from host hook trust and live mobile interaction. Test late delivery after expiry/disconnect, concurrent requests, one-time decisions, and unsupported server choices.
+- Project switching must not redirect queued input or stale file/reply callbacks. The queue stops on failure and never replays on restart. Persist bounded result history separately from in-memory approval payloads and execution queues.
+- Use `npm run doctor` for redacted runtime/login/config/bot checks; it does not send messages. Attachments use bounded downloads and generated inbox names. Native image/audio schema support is not proof that the selected model can interpret an actual attachment.
 - `references/stot-template.md`: durable project-history template. Read when asked to remember or hand off work.
 
 ## Completion report

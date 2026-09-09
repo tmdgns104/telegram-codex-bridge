@@ -4,6 +4,8 @@ import { loadDotEnv, readConfig } from "./config.mjs";
 import { LocalControlServer } from "./local-control.mjs";
 import { acquireSingleton } from "./singleton.mjs";
 import { TelegramClient } from "./telegram-client.mjs";
+import { NativeApprovals } from "./native-approvals.mjs";
+import { WorkspaceStore } from "./workspace-store.mjs";
 
 loadDotEnv();
 
@@ -11,6 +13,7 @@ let singletonLock;
 let telegram;
 let appServer;
 let localControl;
+let nativeApprovals;
 
 try {
   const config = readConfig();
@@ -19,15 +22,21 @@ try {
     chatId: config.allowedChatId,
   });
   telegram = new TelegramClient(config.telegramToken);
+  const workspace = new WorkspaceStore({ directory: config.dataPath, workdir: config.workdir });
+  config.workdir = workspace.selected.path;
+  nativeApprovals = new NativeApprovals({ telegram, chatId: config.allowedChatId,
+    isAllowedProject: (cwd) => workspace.isAllowed(cwd) });
   appServer = new AppServerClient({ codexBin: config.codexBin });
-  const bridge = new CodexTelegramBridge({ appServer, telegram, config });
+  const bridge = new CodexTelegramBridge({ appServer, telegram, config, nativeApprovals, workspace });
   localControl = new LocalControlServer({
     token: config.telegramToken,
     chatId: config.allowedChatId,
     onPrompt: (text) => bridge.submitLocalPrompt(text),
+    onPermission: (event, signal) => nativeApprovals.request(event, signal),
   });
 
   const shutdown = () => {
+    nativeApprovals.close();
     telegram.stop();
     void localControl.close();
     void appServer.close().catch((error) => console.error(error.message));
@@ -47,6 +56,7 @@ try {
   console.error(`시작 실패: ${error.message}`);
   process.exitCode = 1;
 } finally {
+  nativeApprovals?.close();
   telegram?.stop();
   await localControl?.close();
   await appServer?.close();

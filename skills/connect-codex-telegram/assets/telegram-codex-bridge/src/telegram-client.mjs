@@ -27,6 +27,7 @@ export function splitTelegramText(text, maxLength = MAX_MESSAGE_LENGTH) {
   while (remaining.length > maxLength) {
     let cut = remaining.lastIndexOf("\n", maxLength);
     if (cut < Math.floor(maxLength * 0.5)) cut = maxLength;
+    if (/[\uD800-\uDBFF]/.test(remaining[cut - 1]) && /[\uDC00-\uDFFF]/.test(remaining[cut])) cut -= 1;
     chunks.push(remaining.slice(0, cut));
     remaining = remaining.slice(cut).replace(/^\n/, "");
   }
@@ -38,6 +39,7 @@ export class TelegramClient {
   constructor(token, { fetchImpl = fetch, logger = console, requestTimeoutMs = 10_000,
     maxRetries = 2, sleepImpl = wait } = {}) {
     this.baseUrl = `https://api.telegram.org/bot${token}`;
+    this.fileBaseUrl = `https://api.telegram.org/file/bot${token}`;
     this.fetch = fetchImpl;
     this.logger = logger;
     this.offset = 0;
@@ -112,12 +114,40 @@ export class TelegramClient {
   }
 
   sendTextDocument(chatId, text, filename, options = {}) {
+    return this.sendDocument(chatId, new Blob([text], { type: "text/plain;charset=utf-8" }), filename, options);
+  }
+
+  sendDocument(chatId, content, filename, options = {}) {
     const form = new FormData();
     form.set("chat_id", String(chatId));
-    // Generated text only: never open a model-provided file path.
-    form.set("document", new Blob([text], { type: "text/plain;charset=utf-8" }), filename);
+    form.set("document", content instanceof Blob ? content : new Blob([content]), filename);
     for (const [key, value] of Object.entries(options)) form.set(key, String(value));
     return this.call("sendDocument", form);
+  }
+
+  async downloadFile(fileId, maxBytes) {
+    const info = await this.call("getFile", { file_id: fileId });
+    if (typeof info.file_path !== "string" || !/^[a-zA-Z0-9_./-]+$/.test(info.file_path) || info.file_path.split("/").includes("..") || info.file_path.startsWith("/") || info.file_size > maxBytes) {
+      throw new Error("첨부 파일 경로 또는 크기를 확인할 수 없습니다.");
+    }
+    const controller = new AbortController();
+    const abort = () => controller.abort();
+    this.stopController.signal.addEventListener("abort", abort, { once: true });
+    if (this.stopped) controller.abort();
+    const timer = setTimeout(abort, this.requestTimeoutMs);
+    try {
+      const response = await this.fetch(`${this.fileBaseUrl}/${info.file_path}`, { signal: controller.signal, redirect: "error" });
+      if (!response.ok || Number(response.headers.get("content-length")) > maxBytes) throw new Error("download failed");
+      const chunks = [];
+      let total = 0;
+      for await (const chunk of response.body) {
+        total += chunk.length;
+        if (total > maxBytes) { controller.abort(); throw new Error("oversized"); }
+        chunks.push(chunk);
+      }
+      return Buffer.concat(chunks, total);
+    } catch { throw new Error("첨부를 받지 못했습니다. 10MB 이하 파일인지 확인하고 다시 보내세요."); }
+    finally { clearTimeout(timer); this.stopController.signal.removeEventListener("abort", abort); }
   }
 
   removeKeyboard(chatId, messageId) {

@@ -1,6 +1,8 @@
 export function clip(value, max = 1200) {
   const text = String(value ?? "");
-  return text.length <= max ? text : `${text.slice(0, max)}\n…(생략)`;
+  if (text.length <= max) return text;
+  const cut = /[\uD800-\uDBFF]/.test(text[max - 1]) ? max - 1 : max;
+  return `${text.slice(0, cut)}\n…(생략)`;
 }
 
 export function formatDuration(milliseconds) {
@@ -20,17 +22,20 @@ function formatReason(value) {
   return reason;
 }
 
-export function formatApproval(method, params) {
+export function formatApproval(method, params, { full = false } = {}) {
   const reason = params.reason ? `\n\n이유: ${clip(formatReason(params.reason), 600)}` : "";
   if (method === "item/commandExecution/requestApproval") {
     const network = params.networkApprovalContext;
     if (network) {
       return `🌐 네트워크 접근 승인 요청\n\n대상: ${network.protocol}://${network.host}${reason}`;
     }
-    return `⚠️ 명령 실행 승인 요청\n\n명령:\n${clip(params.command || "(명령 정보 없음)")}\n\n위치: ${params.cwd || "(알 수 없음)"}${reason}`;
+    const extra = params.additionalPermissions ? `\n추가 접근 범위:\n${JSON.stringify(params.additionalPermissions, null, 2)}` : "";
+    return `⚠️ 명령 실행 승인 요청\n\n명령:\n${full ? params.command || "(명령 정보 없음)" : clip(params.command || "(명령 정보 없음)")}\n\n위치: ${params.cwd || "(알 수 없음)"}${reason}${full ? extra : clip(extra, 700)}`;
   }
   if (method === "item/fileChange/requestApproval") {
-    return `📝 파일 변경 승인 요청${reason || "\n\nCodex가 파일을 변경하려고 합니다."}`;
+    const changes = Array.isArray(params.changes) ? params.changes : [];
+    const details = changes.map((change) => `${change.path || "(경로 미제공)"} · ${typeof change.kind === "object" ? change.kind.type : change.kind || "변경"}\n${change.diff || "(차이 미제공)"}`).join("\n\n");
+    return `📝 파일 변경 승인 요청${reason}\n\n${details ? (full ? details : clip(details, 1700)) : "변경 파일·차이를 제공받지 못했습니다. 승인 전에 PC에서 확인하세요."}${params.grantRoot ? `\n쓰기 허용 경로: ${params.grantRoot}` : ""}`;
   }
   if (method === "item/permissions/requestApproval") {
     return `🔐 추가 권한 승인 요청\n\n위치: ${params.cwd}\n요청: ${clip(JSON.stringify(params.permissions, null, 2))}${reason}`;

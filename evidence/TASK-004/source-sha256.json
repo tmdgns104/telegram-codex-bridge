@@ -1,0 +1,177 @@
+{
+  "basis": "Git index blob bytes (Git-normalized line endings)",
+  "files": [
+    {
+      "path": "README.md",
+      "sha256": "81caf70932e0fa109e383842936b86df55aeca83e6d49b10f0b649ec53c2de38"
+    },
+    {
+      "path": "codex-tg.cmd",
+      "sha256": "28859c7183abbb5312a1d0e35b1b4e79ce00265359cffeb500e6e1a5899ed842"
+    },
+    {
+      "path": "package.json",
+      "sha256": "2860add541e688a1fe4ae1bb9c5095b6bd6e5fecd0db35852b5938aa6dedf68a"
+    },
+    {
+      "path": "scripts/check.mjs",
+      "sha256": "4ec7a63edc9a2ef880e3b3d3ecfc11fc81c55ad0182f45047d96b5cdc1f18549"
+    },
+    {
+      "path": "scripts/codex-notify-router.py",
+      "sha256": "d3ac45472707dd659782437913bb458d514e7cfc58ffaf3d832aab3a743c7d96"
+    },
+    {
+      "path": "scripts/codex-telegram-notify.py",
+      "sha256": "130b8b48f8e4f275607061331ad3a5b95cee48c13d615f87e75529b32d47e5ed"
+    },
+    {
+      "path": "scripts/codex-tg.mjs",
+      "sha256": "ae75244da8c1310f149f2d40c6502e6a3a2803f8e55f92461c91be56a57026a2"
+    },
+    {
+      "path": "scripts/discover-chat-id.mjs",
+      "sha256": "e28769410eb6d038bee5605590ece1264bdef0ee89bd87dd693e9f57fdac9174"
+    },
+    {
+      "path": "scripts/doctor.mjs",
+      "sha256": "b74087a65c12e914484bc67e3fa6968d481da325e07af5b1869edf9969c0410e"
+    },
+    {
+      "path": "scripts/notify.mjs",
+      "sha256": "5c8af9a8a0c54d6be2dfa29914c2166e85a2158880a421de2ce89b5dbea3b4aa"
+    },
+    {
+      "path": "scripts/permission-hook.mjs",
+      "sha256": "15c9dba0d068d01657228dbb185b8683b03faf790fbb839bce388a30506026a3"
+    },
+    {
+      "path": "scripts/setup.mjs",
+      "sha256": "256db10b6b431ce1d45df86924d6bb276813f0fee922b291e71904412b13120e"
+    },
+    {
+      "path": "scripts/smoke-app-server.mjs",
+      "sha256": "1405ad6025dc36b1f39ec4d94f3fdc4fac582e6d84df1346b073df9dfb390ad8"
+    },
+    {
+      "path": "setup.cmd",
+      "sha256": "e8dccc605f9ed50205bff3fc130c68199a65bac04a0a1716a9684017a995725a"
+    },
+    {
+      "path": "src/app-server-client.mjs",
+      "sha256": "3b4154763d48fd2363261f0e783fe9a131cf514544c4cfe3ee6027d61fb64b4d"
+    },
+    {
+      "path": "src/bridge.mjs",
+      "sha256": "d9c7fb1d3044382c0ab78da28078fb81ca28db8bc4070dc131457dba4fbd50c4"
+    },
+    {
+      "path": "src/config.mjs",
+      "sha256": "74dae21f95e9aa0dc85db570375cecce3c91834d4330cb8cd52d6bbcaf48e769"
+    },
+    {
+      "path": "src/files.mjs",
+      "sha256": "406c546a13311f743107b5bd19c7d0487cdf03f940fa3850fc107495af9c2f2f"
+    },
+    {
+      "path": "src/format.mjs",
+      "sha256": "cfca9e5e1cf67ffd8dc897acd0d75a190c76fc787c1ac1210af3d4dbaa455a5f"
+    },
+    {
+      "path": "src/index.mjs",
+      "sha256": "1cc713f80d7d81c82ab06eaaccdb2c0637fb7875e299a419bee13c7aa51f4759"
+    },
+    {
+      "path": "src/local-control.mjs",
+      "sha256": "c9c93ada2ac1a273551e44776dfb85f833feef7e4e7803007cb0361138bbf931"
+    },
+    {
+      "path": "src/native-approvals.mjs",
+      "sha256": "afe748620592996a77ae4d1b8cf9a2f710172ff192e1b820043ba84d5b3e3dc0"
+    },
+    {
+      "path": "src/notification-delivery.mjs",
+      "sha256": "7b91ce1622bec4a45d77bab294876bd381d3db3b29d533d8d51c9f03bc250dc7"
+    },
+    {
+      "path": "src/result-presentation.mjs",
+      "sha256": "0cc766b69e5f4a76ed67acef0e7be594b2ddeb694624c21e72d6269c2e8e9c38"
+    },
+    {
+      "path": "src/setup.mjs",
+      "sha256": "4acfd7f5950f66ea9c506e3ade236af7e8d5cb5e9f0e6d00426b8bca4ba255df"
+    },
+    {
+      "path": "src/singleton.mjs",
+      "sha256": "7adfddb806d25d24434c1b5c0c38d2f3920a2ed574dac896cb3a0dd042577e31"
+    },
+    {
+      "path": "src/telegram-client.mjs",
+      "sha256": "267bd9bce9108111bb05bd7fe8cce382a290608375ec568772e33c32ae82805b"
+    },
+    {
+      "path": "src/workspace-store.mjs",
+      "sha256": "c893926b429e1e6d4ac35e11ff54f3084010498db1e5dcb27df2ddfb7d3468b4"
+    },
+    {
+      "path": "start.cmd",
+      "sha256": "3aa4fd917d96f407469689972f61f74ff7340c3654c4f6be9e7d8995711cec18"
+    },
+    {
+      "path": "test/app-server-client.test.mjs",
+      "sha256": "062e22696e8d34ba597be11d28e4125dcc5ebc4401967c40cd66ba05593ceba6"
+    },
+    {
+      "path": "test/bridge.test.mjs",
+      "sha256": "0f7335856523de1e4b2bdbf5a0c6fc4b8393dcc653c5e2c40489cffa85154b72"
+    },
+    {
+      "path": "test/cli.test.mjs",
+      "sha256": "cb89c28521c2fb6eef6e4d5483af2bdce498c81c948be3efd8f64f6a84570d1a"
+    },
+    {
+      "path": "test/config.test.mjs",
+      "sha256": "69920685d7a8d0d281af990d308810e7e229cded0650397115d3166a4e176106"
+    },
+    {
+      "path": "test/format.test.mjs",
+      "sha256": "59838d400e2a724d5ad23b2145d32f472e2bffaa1b2281e8051fe13645ad5753"
+    },
+    {
+      "path": "test/local-control.test.mjs",
+      "sha256": "5a3d60a2db8c12f210306a19ef2e021a2c9e53972eb23df1644f9f08af0c67e9"
+    },
+    {
+      "path": "test/native-approvals.test.mjs",
+      "sha256": "6d5622eb89c7c653d0ebe3a9119f56611c740e19381c761d8ab30e9bfecd0b53"
+    },
+    {
+      "path": "test/notification-delivery.test.mjs",
+      "sha256": "e04823defbd298f1d249bf6bb85a63aa33bbbf5527c2b0d31123750cf3ff25bf"
+    },
+    {
+      "path": "test/notify-entrypoint.test.mjs",
+      "sha256": "33c5fdb6b73b3f311383e6b6e167fe5d92d8d5f600398116614d359aa0e19a44"
+    },
+    {
+      "path": "test/permission-hook.test.mjs",
+      "sha256": "364f330bd975e3cda53a0356f226449323a680eaa5ea5f705a2dbb2a1509f299"
+    },
+    {
+      "path": "test/result-presentation.test.mjs",
+      "sha256": "7cc6578fa3566849432738c02cf6a00c806bcb915296f61c325eea908699dff9"
+    },
+    {
+      "path": "test/singleton.test.mjs",
+      "sha256": "d06db7543a071ac9160d35f2e6eb006d930edfb2fc36811c2cae46aa7b5f5056"
+    },
+    {
+      "path": "test/telegram-client.test.mjs",
+      "sha256": "45240e6633eccf5eefd3635d6bca4b337aa228edaf4fb79818fbb0148bab3c12"
+    },
+    {
+      "path": "test/workflow.test.mjs",
+      "sha256": "f5b29deb26aec1364310e17706d21689c04e38ce316f705413869dafc33a9fc4"
+    }
+  ]
+}

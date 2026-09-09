@@ -58,6 +58,6 @@ export function readConfig(env = process.env, { requireTelegram = true } = {}) {
     approvalPolicy,
     pollTimeout,
     statePath: path.resolve(".state.json"),
+    dataPath: path.resolve(".bridge-data"),
   };
 }
-

@@ -15,3 +15,5 @@ __pycache__/
 /STOT.md
 /evidence/**/smoke*.txt
 /.notify-dedup/
+/.bridge-data/
+/.telegram-inbox/

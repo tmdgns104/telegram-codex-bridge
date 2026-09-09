@@ -4,6 +4,21 @@ import { TelegramClient } from "../src/telegram-client.mjs";
 
 const response = (status, payload) => new Response(JSON.stringify(payload), { status });
 
+test("file downloads bound streamed bytes, reject traversal and never expose the token URL", async () => {
+  const calls = [];
+  const client = new TelegramClient("synthetic-private", { fetchImpl: async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith("getFile")) return response(200, { ok: true, result: { file_path: "documents/file_1.txt" } });
+    return new Response(Buffer.from("한글"));
+  } });
+  assert.equal((await client.downloadFile("id", 100)).toString(), "한글");
+  assert.equal(calls[1].init.redirect, "error");
+  await assert.rejects(client.downloadFile("id", 2), (error) => !error.message.includes("synthetic-private"));
+  const unsafe = new TelegramClient("synthetic", { fetchImpl: async () => response(200, { ok: true, result: { file_path: "../private/file.txt" } }) });
+  await assert.rejects(unsafe.downloadFile("id", 100), /경로/);
+  client.stop(); unsafe.stop();
+});
+
 test("429 respects retry_after and retries only when requested", async () => {
   const delays = [];
   const bodies = [];
