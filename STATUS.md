@@ -2,7 +2,7 @@
 
 Updated: 2026-09-09
 Current Task: [TASK-004](tasks/TASK-004-complete-remote-workflow.md)
-Status: VERIFIED — TASK-004 구현·자동검증 완료, 게시 및 실사용 활성화 대기
+Status: PUBLISHED — TASK-004 구현·자동검증·GitHub 게시 완료, 실사용 활성화 대기
 Repository: https://github.com/tmdgns104/telegram-codex-bridge (public, main)
 
 TASK-004: native 권한 훅, 승인 상세, setup/doctor, 사진·문서·음성/산출물,
@@ -10,7 +10,8 @@ TASK-004: native 권한 훅, 승인 상세, setup/doctor, 사진·문서·음성
 104/104 테스트 PASS, 실제 Codex 연결 smoke PASS, 전역/저장소 스킬 검증 PASS.
 PC 승인 hook 정의 설치와 실제 봇 인증·채팅 조회도 성공했다. [Evidence](evidence/TASK-004/verification.md)
 UNVERIFIED: Codex hook 신뢰·실제 휴대폰 승인 왕복·모델의 첨부 해석. 운영 브리지 실행은 수행하지 않음.
-Next: 게시 확인 → 사용자 Codex /hooks에서 신뢰 → start.cmd → Telegram /menu 및 지원 승인 요청 확인.
+Published: 구현 커밋 `bbb292d929191762c4a4cdcba087c1ed5d1861f3`, GitHub main/로컬 HEAD 일치·깨끗한 작업 트리 확인.
+Next: 사용자 Codex /hooks에서 신뢰 → start.cmd → Telegram /menu 및 지원 승인 요청 확인.
 이전 TASK-003은 아래와 같이 완료된 상태다.
 
 TASK-003은 승인된 첫 사용성 개선 범위다. PC 알림과 브리지 출력 경로를 함께 다루며,

@@ -63,6 +63,14 @@ public evidence, skills or knowledge capture. Uploads require the user's explici
 
 ## Publication
 
-Pre-publication audit: reachable history (103 blobs) and the staged tree contain no forbidden paths or
+Pre-publication audit: reachable history (103 blobs) and the staged tree (123 paths) contain no forbidden paths or
 credential-pattern matches. Source hashes use Git index bytes; runtime/template/global/temporary-install
-parity checks pass. See audit.json and source-sha256.json. Commit/push and remote SHA verification pending.
+parity checks pass. See audit.json and source-sha256.json.
+
+Implementation published as `bbb292d929191762c4a4cdcba087c1ed5d1861f3` to the authorized public
+repository https://github.com/tmdgns104/telegram-codex-bridge, default branch main. Observed `git ls-remote`
+and GitHub API both match local HEAD; the branch tracks origin/main and the working tree was clean.
+The published implementation is the audited tree. This documentation-only follow-up records that observation.
+
+Acceptance: implementation and automated checks PASS for the scoped workflow. Hook trust, live mobile
+activation and model media interpretation remain UNVERIFIED as specified above.

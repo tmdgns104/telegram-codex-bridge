@@ -1,6 +1,6 @@
 # TASK-004 — PC와 휴대폰을 잇는 실사용 흐름
 
-Status: VERIFIED — implementation checks PASS; publication/activation pending
+Status: PUBLISHED — implementation checks and publication PASS; live activation UNVERIFIED
 Baseline: c05833281ef8f34a2cae40e0dd5540e8aacf9ae7
 Authorization: 2026-09-09, PC 원격 승인 구조 변경 제안에 이어 사용자가 나머지 개선 전부 진행을 요청함.
 
@@ -51,5 +51,6 @@ TASK-001–003 이력은 보존하며, 아래 항목을 하나의 원격 작업 
 등록·선택·제거 가능한 프로젝트, 명시적 대기열, 최근 결과 기록과 버튼 메뉴.
 프로젝트와 임시 설치본 check 및 104/104 테스트 PASS. 실제 Codex smoke와 두 스킬 validator PASS.
 실제 봇 인증·채팅 조회 성공. PC 승인 hook 정의를 별도 hooks.json에 설치하여 기존 config/notifier는 보존함.
-남음: 게시 감사/commit/push/SHA 확인. 운영 활성화는 사용자 hook 신뢰와 브리지 실행이 필요하며,
+게시 완료: 구현 커밋 bbb292d929191762c4a4cdcba087c1ed5d1861f3. 공개 main의 SHA/로컬 HEAD 일치,
+origin/main 추적과 깨끗한 작업 트리를 확인했다. 운영 활성화는 사용자 hook 신뢰와 브리지 실행이 필요하며,
 휴대폰의 실제 승인 왕복과 모델의 첨부 해석은 UNVERIFIED. Evidence: evidence/TASK-004/verification.md.
