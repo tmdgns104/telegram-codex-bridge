@@ -54,3 +54,17 @@
 Telegram으로 검증했다. `/last`는 재시작 후 결과를 복구하지 않는다. 브리지 프로세스
 재시작 및 모델 작업 실행은 수행하지 않았다. 다음 운영 확인은 작업 완료 후 재시작과
 사용자의 `/status`, `/last` 확인이다.
+
+## GitHub publication
+
+- 사용자 요청 대상: `https://github.com/tmdgns104/telegram-codex-bridge`.
+- 기존 PUBLIC 저장소에 branch/commit이 없음을 `git ls-remote` 및 GitHub CLI로 확인했다.
+- 최초 구현 커밋: `bdb32329357f7b42a8346da14359c5499935fd00`.
+- 스테이징 58개 파일의 내용·확장자·크기를 확인했다. 실제 형식의 Telegram/GitHub/API
+  토큰, 개인 키, 개인 홈 경로 패턴 탐지 결과 0건. 이는 패턴 검사 범위의 결과다.
+- 제외 파일: 실제 설정, 대화 상태, 운영 로그, 개인 운영 이력, 과거 ZIP, 생성 스키마.
+  로컬 파일은 보존했다. 새 저장소이므로 이전 커밋에서 제거할 자료는 없었다.
+- `git push -u origin main` 성공 후 GitHub API에서 원격 SHA와 로컬 HEAD가 위 커밋으로
+  일치함을 확인했다. 기본 branch main, PUBLIC, 원격 파일 58개, 제외 파일 0개,
+  upstream origin/main, 작업 트리 clean을 관측했다.
+- 이 게시 검증 기록은 후속 문서 커밋에 보관한다. 후속 변경은 문서에 한정된다.

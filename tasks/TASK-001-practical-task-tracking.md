@@ -60,3 +60,14 @@ Date: 2026-09-09
 - Evidence: `evidence/TASK-001/verification.md`, `check.txt`, `tests.txt`, `smoke.txt`, `source-sha256.json`.
 - Next: 사용자가 진행 중 작업을 마친 뒤 기존 브리지 종료 → `start.cmd` → `/status`, `/last` 확인.
   다음 독립 개발 Task는 자동 시작하지 않는다.
+
+## 사용자 추가 요청 — GitHub 게시
+
+- 대상: `https://github.com/tmdgns104/telegram-codex-bridge`. 사용자의 명시적인 게시 요청에 따라 실행했다.
+- 대상은 기존 공개 저장소이며 원격 커밋이 없었다. 로컬 `main`을 초기화하고
+  기존 구현과 이번 변경을 함께 최초 커밋 `bdb3232`로 게시했다.
+- 58개 파일의 스테이징 내용을 검사했다. `.env`, 상태 파일, 로그, ZIP, 개인 운영 이력,
+  생성 스키마는 게시하지 않았다. 커밋 이메일에는 GitHub noreply 주소를 사용했다.
+- 게시 후 GitHub API로 원격 SHA와 로컬 SHA 일치, 공개 상태, 기본 branch main,
+  원격 파일 58개와 제외 파일 부재를 확인했다. 로컬은 `origin/main`을 추적한다.
+- 게시 검증 기록은 별도 문서 커밋으로 보존한다. 실제 봇 운영 검증 범위는 위와 동일하다.
